@@ -150,6 +150,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+
+.scrollbar-hide {
+  -ms-overflow-style: none;  
+  scrollbar-width: none;  
+}
+
 /* Typography Scale */
 h2 { font-size: var(--text3xl); font-weight: var(--font-bold); line-height: var(--line-height-heading); }
 h3 { font-size: var(--text-2xl); font-weight: var(--font-semibold); line-height: var(--line-height-heading); }

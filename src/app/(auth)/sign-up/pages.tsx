@@ -1,7 +1,7 @@
 import React from "react";
-
-const pages = () => {
-  return <div>pages</div>;
+import {SignUpButton} from"@clerk/nextjs";
+const page = () => {
+  return <div><SignUpButton/></div>;
 };
 
-export default pages;
+export default page;
