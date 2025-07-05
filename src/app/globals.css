@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
+@import "uploadthing/tw/v4";
+@source "../node_modules/@uploadthing/react/dist"; /** <-- depends on your project structure */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -231,4 +232,33 @@ input:focus, textarea:focus {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Custom upload component overrides */
+.custom-upload-container {
+  width: 64px !important;
+  height: 48px !important;
+  min-width: 64px !important;
+  min-height: 48px !important;
+  max-width: 64px !important;
+  max-height: 48px !important;
+}
+
+.custom-upload-container > div {
+  width: 64px !important;
+  height: 48px !important;
+  min-width: 64px !important;
+  min-height: 48px !important;
+  max-width: 64px !important;
+  max-height: 48px !important;
+}
+
+/* Override any uploadthing default styles */
+[data-ut-element="dropzone"] {
+  width: 64px !important;
+  height: 48px !important;
+  min-width: 64px !important;
+  min-height: 48px !important;
+  max-width: 64px !important;
+  max-height: 48px !important;
 }
