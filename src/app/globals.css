@@ -244,6 +244,10 @@ input:focus, textarea:focus {
   max-height: 48px !important;
 }
 
+.custom-upload-container label {
+  display: none;
+}
+
 .custom-upload-container > div {
   width: 64px !important;
   height: 48px !important;
@@ -253,8 +257,11 @@ input:focus, textarea:focus {
   max-height: 48px !important;
 }
 
+
+
 /* Override any uploadthing default styles */
 [data-ut-element="dropzone"] {
+  
   width: 64px !important;
   height: 48px !important;
   min-width: 64px !important;

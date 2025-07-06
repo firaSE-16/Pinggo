@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ModeToggle } from "@/components/Global/mode-toggle";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from '@clerk/themes'
+import { Toaster } from 'sonner';
+import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { extractRouterConfig } from "uploadthing/server";
+import { ourFileRouter } from "@/app/api/uploadthing/core";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +49,7 @@ export const metadata: Metadata = {
     follow: true,
   },
 };
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -54,12 +58,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <ClerkProvider appearance={{baseTheme:dark}}>
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />
+          <ThemeProvider>
+            {children}
 
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
-      </body>
+            <Toaster richColors position="top-right" />
+          </ThemeProvider>
+        </body>
       </ClerkProvider>
     </html>
   );

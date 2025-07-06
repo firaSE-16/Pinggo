@@ -1,19 +1,33 @@
+import { auth } from "@clerk/nextjs/server";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { getAuth } from "@clerk/nextjs/server";
+import { UploadThingError } from "uploadthing/server";
 
 const f = createUploadthing();
 
-export const ourFileRouter = {
-  avatarUploader: f({ image: { maxFileSize: "2MB" } })
-    .middleware(async ({ req }) => {
-      const { userId } = getAuth(req);
-      if (!userId) throw new Error("Unauthorized");
 
-      return { userId };
+    
+
+export const ourFileRouter = {
+  
+  imageUploader: f({
+    image: {
+      
+      maxFileSize: "4MB",
+      maxFileCount: 1,
+    },
+  })
+    .middleware(async () => {
+      console.log("hello")
+      const user = await auth();
+
+      if (!user) throw new UploadThingError("Unauthorized");
+
+      return { userId: user.userId };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("✅ Upload complete for userId:", metadata.userId);
-      console.log("📸 File URL:", file.url); // ✅ use `file.url` not `ufsUrl`
+ 
+
+      return { uploadedBy: metadata.userId };
     }),
 } satisfies FileRouter;
 
