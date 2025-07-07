@@ -1,6 +1,6 @@
 "use client";
-import {toast} from 'sonner'
-import React, { useState, useEffect } from "react";
+import { toast } from 'sonner'
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import { motion } from "framer-motion";
 import { Shield, UserPlus, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import axios from 'axios'
+import Loading from '@/components/loading';
+
 const registrationSchema = z.object({
   username: z.string().min(2).max(50),
   email: z.string().email(),
@@ -30,17 +32,15 @@ const registrationSchema = z.object({
 });
 
 const Page = () => {
-
-  const [loading, setLoading] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string>("");
-
+  const [loading, setLoading] = useState(false);
   const { user } = useUser();
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
+
   const form = useForm<z.infer<typeof registrationSchema>>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
       username: "",
-      email: user?.emailAddresses[0].emailAddress,
+      email: user?.emailAddresses[0]?.emailAddress || "",
       password: "",
       fullName: "",
       bio: "",
@@ -48,37 +48,37 @@ const Page = () => {
     },
   });
 
-  useEffect(() => {
-    toast("Toast test: If you see this, toasts are working!");
-  }, []);
+  // Sync uploaded image with form state
+  React.useEffect(() => {
+    if (uploadedImageUrl) {
+      form.setValue('avatarUrl', uploadedImageUrl);
+    }
+  }, [uploadedImageUrl, form]);
 
   async function onSubmit(values: z.infer<typeof registrationSchema>) {
-    console.log("form submitted with values", values);
-    setLoading(true);
-    setErrorMessage("");
     try {
+      setLoading(true);
+      console.log("Form submission values:", values);
+      
       const response = await axios.post("/api/registration", values);
-      toast.success("Your account was created successfully!");
-      console.log("API response:", response);
-    } catch (error: unknown) {
-      let msg = "";
-      if (axios.isAxiosError(error)) {
-        msg = error.response?.data.message || "Registration failed";
-        console.error("API error response:", error.response);
+      
+      if (response.data.success) {
+        toast.success("Account created successfully!");
+        console.log("Registration successful:", response.data);
       } else {
-        msg = "Something went wrong";
-        console.error("Unknown error:", error);
+        throw new Error(response.data.message || "Registration failed");
       }
-      setErrorMessage(msg);
-      toast.error(msg);
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast.error(error.response?.data?.message || error.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   }
 
-
   return (
     <div className="relative min-h-screen w-full bg-background text-foreground overflow-hidden">
+      {/* Background elements */}
       <div className="absolute inset-0 overflow-hidden -z-10">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:4rem_4rem]">
           <svg
@@ -142,162 +142,144 @@ const Page = () => {
             className="bg-card rounded-2xl p-6 md:p-8 border border-border shadow-sm"
           >
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6 md:space-y-8"
-              >
-                {errorMessage && (
-                  <div className="bg-red-100 text-red-700 p-3 rounded mb-4 border border-red-300">
-                    {errorMessage}
-                  </div>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Username */}
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground/80">
-                          Username
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter your username"
-                            {...field}
-                            className="rounded-lg h-12"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Password */}
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground/80">
-                          Password
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            {...field}
-                            className="rounded-lg h-12"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Full Name */}
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground/80">
-                          Full Name
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter your full name"
-                            {...field}
-                            className="rounded-lg h-12"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Bio */}
-                  <FormField
-                    control={form.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground/80">
-                          Bio (Optional)
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Tell us about yourself"
-                            {...field}
-                            className="rounded-lg h-12"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="md:col-span-2">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-8">
+                {!loading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
-                      name="avatarUrl"
+                      name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground/80">
-                            Profile Picture (Optional)
-                          </FormLabel>
+                          <FormLabel className="text-foreground/80">Username</FormLabel>
                           <FormControl>
-                            <div className="space-y-4">
-                              {uploadedImageUrl && (
-                                <div className="flex items-center justify-center">
-                                  <div className="relative">
-                                    <img
-                                      src={uploadedImageUrl}
-                                      alt="Profile preview"
-                                      className="w-24 h-24 rounded-full object-cover border-2 border-primary"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setUploadedImageUrl("");
-                                        field.onChange("");
-                                      }}
-                                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-destructive/90"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                              <div className="rounded-lg border border-dashed border-border p-6">
-                                 <UploadButton
-        endpoint="imageUploader"
-        onClientUploadComplete={(res) => {
-          // Do something with the response
-          console.log("Files: ", res);
-          if (res && res[0]) {
-            setUploadedImageUrl(res[0].ufsUrl);
-            field.onChange(res[0].ufsUrl);
-          }
-          alert("Upload Completed");
-        }}
-        onUploadError={(error: Error) => {
-          // Do something with the error.
-          console.error("Upload error:", error);
-          alert(`ERROR! ${error.message}`);
-        }}
-      />
-                                                            </div>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
+                            <Input
+                              placeholder="Enter your username"
+                              {...field}
+                              className="rounded-lg h-12"
+                            />
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                </div>
 
-                {/* Privacy and Terms */}
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground/80">Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              {...field}
+                              className="rounded-lg h-12"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground/80">Full Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter your full name"
+                              {...field}
+                              className="rounded-lg h-12"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-foreground/80">Bio (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Tell us about yourself"
+                              {...field}
+                              className="rounded-lg h-12"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="md:col-span-2">
+                      <FormField
+                        control={form.control}
+                        name="avatarUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-foreground/80">
+                              Profile Picture (Optional)
+                            </FormLabel>
+                            <FormControl>
+                              <div className="space-y-4">
+                                {uploadedImageUrl && (
+                                  <div className="flex items-center justify-center">
+                                    <div className="relative">
+                                      <img
+                                        src={uploadedImageUrl}
+                                        alt="Profile preview"
+                                        className="w-24 h-24 rounded-full object-cover border-2 border-primary"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setUploadedImageUrl("");
+                                          field.onChange("");
+                                        }}
+                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-destructive/90"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="rounded-lg border border-dashed border-border p-6">
+                                  <UploadButton
+                                    endpoint="imageUploader"
+                                    onClientUploadComplete={(res) => {
+                                      if (res?.[0]?.url) {
+                                        setUploadedImageUrl(res[0].url);
+                                        form.setValue('avatarUrl', res[0].url);
+                                      }
+                                    }}
+                                    onUploadError={(error: Error) => {
+                                      console.error("Upload error:", error);
+                                      toast.error(`Upload failed: ${error.message}`);
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className='flex flex-col gap-10 justify-center items-center h-80'>
+                    <Loading/>
+                    <p className='3xl font-bold'>Just a moment...</p>
+                  </div>
+                )}
+
                 <div className="flex items-start space-x-3">
                   <Shield className="w-5 h-5 text-primary mt-0.5" />
                   <p className="text-sm text-foreground/70">
@@ -313,7 +295,6 @@ const Page = () => {
                   </p>
                 </div>
 
-                {/* Submit Button */}
                 <motion.div
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
@@ -327,13 +308,10 @@ const Page = () => {
                     Complete Account <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </motion.div>
-
-                
               </form>
             </Form>
           </motion.div>
 
-          {/* Support Links */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
