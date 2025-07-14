@@ -9,17 +9,14 @@ import {
   Users,
   DollarSign,
   ChevronRight,
-  Check,
   ArrowRight,
   Sparkles,
-  Shield,
-  Smartphone,
   UserPlus,
   LayoutDashboard,
   Twitter,
   Instagram,
   Linkedin,
-  Facebook,
+
 } from "lucide-react";
 import { ModeToggle } from "@/components/Global/mode-toggle";
 import { motion } from "framer-motion";

@@ -9,6 +9,7 @@ import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { extractRouterConfig } from "uploadthing/server";
 import { ourFileRouter } from "@/app/api/uploadthing/core";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -55,13 +56,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en">
       <ClerkProvider appearance={{baseTheme:dark}}>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />
           <ThemeProvider>
+          
             {children}
+        
 
             <Toaster richColors position="top-right" />
           </ThemeProvider>

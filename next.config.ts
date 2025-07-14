@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  image:{
+    domains:['utfs.io']
+  },
   experimental: {
     serverComponentsExternalPackages: ["uploadthing"],
   },

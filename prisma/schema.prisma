@@ -140,8 +140,6 @@ model Mention {
   id         String   @id @default(uuid())
   mentionedId String
   postId     String?
-  commentId  String?
-
   mentioned  User     @relation(fields: [mentionedId], references: [id])
   post       Post?    @relation(fields: [postId], references: [id])
 }
@@ -150,7 +148,7 @@ model Story {
   id         String   @id @default(uuid())
   mediaUrl   String
   caption    String?
-  expiresAt  DateTime
+  expiresAt  DateTime @default(now())
   createdAt  DateTime @default(now())
 
   userId     String
