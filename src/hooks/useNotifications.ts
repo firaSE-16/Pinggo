@@ -45,7 +45,6 @@ export const useNotifications = (): UseNotificationsReturn => {
     
     try {
       setIsLoading(true);
-      setError(null);
       const [fetchedNotifications, fetchedSettings] = await Promise.all([
         fetchNotifications(),
         getNotificationSettings() // Now returns local defaults
@@ -53,7 +52,8 @@ export const useNotifications = (): UseNotificationsReturn => {
       setNotifications(fetchedNotifications);
       setSettings(fetchedSettings);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load notifications');
+      // Silently log error, do not block UI
+      console.error('Failed to load notifications:', err);
     } finally {
       setIsLoading(false);
     }
