@@ -4,8 +4,9 @@ import { NextResponse } from "next/server";
 import { MessageType } from "@prisma/client";
 
 // GET: fetch all messages between current user and [id]
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id: otherUserId } = await params;
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     const clerk = await clerkClient();
@@ -14,7 +15,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     if (!email) return NextResponse.json({ message: "Email address not found." }, { status: 400 });
     const profile = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (!profile) return NextResponse.json({ message: "User not found." }, { status: 404 });
-    const otherUserId = params.id;
     // Check if the other user exists
     const otherUser = await prisma.user.findUnique({ where: { id: otherUserId }, select: { id: true } });
     if (!otherUser) return NextResponse.json({ message: "Chat partner not found." }, { status: 404 });
@@ -40,8 +40,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // POST: send a message to [id]
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id: otherUserId } = await params;
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     const clerk = await clerkClient();
@@ -50,7 +51,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!email) return NextResponse.json({ message: "Email address not found." }, { status: 400 });
     const profile = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (!profile) return NextResponse.json({ message: "User not found." }, { status: 404 });
-    const otherUserId = params.id;
     // Check if the other user exists
     const otherUser = await prisma.user.findUnique({ where: { id: otherUserId }, select: { id: true } });
     if (!otherUser) return NextResponse.json({ message: "Chat partner not found." }, { status: 404 });

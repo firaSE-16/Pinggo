@@ -158,7 +158,7 @@ const Reel = ({ postData, isLoading = false }: ReelProps) => {
               if (video) {
                 video.play().then(() => setPlayingIndex(closestIndex)).catch(e => {
                   console.error("Video playback error:", e);
-                  setMediaErrors(prev => ({ ...prev, [closestIndex]: true }));
+                     setMediaErrors(prev => ({ ...prev, [closestIndex as number]: true }));
                 });
               }
             }

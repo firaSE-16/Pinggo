@@ -1,9 +1,10 @@
 'use client';
 
+import { Suspense } from "react";
 import { SignIn } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 
-export default function SignInPage() {
+function SignInContent() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect_url');
 
@@ -27,5 +28,13 @@ export default function SignInPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
   );
 }

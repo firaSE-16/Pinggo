@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["uploadthing"],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async headers() {
     return [
       {

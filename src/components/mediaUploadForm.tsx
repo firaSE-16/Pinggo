@@ -201,7 +201,12 @@ export function MediaUploadForm() {
                 const newUrls = urls.filter((_, i) => i !== index);
                 setPreviewUrls(newUrls);
                 if (activeTab === "post") {
-                  postForm.setValue("mediaUrls", newUrls.map(u => ({ url: u.url, mediaType: u.mediaType })));
+                  postForm.setValue(
+                    "mediaUrls",
+                    newUrls
+                      .filter(u => u.mediaType !== "unknown")
+                      .map(u => ({ url: u.url, mediaType: u.mediaType as 'image' | 'video' }))
+                  );
                 } else if (activeTab === "story") {
                   storyForm.setValue("mediaUrl", "");
                   storyForm.setValue("mediaType", 'image');
@@ -327,7 +332,12 @@ export function MediaUploadForm() {
                                             })
                                           );
                                           setPreviewUrls(newUrls);
-                                          field.onChange(newUrls.map(u => ({ url: u.url, mediaType: u.mediaType })));
+                                          postForm.setValue(
+                                            "mediaUrls",
+                                            newUrls
+                                              .filter(u => u.mediaType !== "unknown")
+                                              .map(u => ({ url: u.url, mediaType: u.mediaType as 'image' | 'video' }))
+                                          );
                                         }
                                       }}
                                       onUploadError={(error: Error) => {

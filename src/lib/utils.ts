@@ -24,7 +24,7 @@ export function checkMediaType(url: string) {
     if (lowerUrl.includes('/video') || lowerUrl.includes('vid') || lowerUrl.includes('mp4')) {
       return 'video';
     }
-    return 'unkown';
+    return 'unknown';
   }
 }
 

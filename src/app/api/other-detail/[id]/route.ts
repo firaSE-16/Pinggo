@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/db";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { NextApiRequest } from "next";
+import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export async function GET(
-  req: NextApiRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -172,7 +172,7 @@ export async function GET(
       { status: 200 }
     );
   } catch (error: any) {
-    console.error(`[GET /api/other-detail/${params ? 'unknown' : 'unknown'}] Error:`, error);
+    console.error(`[GET /api/other-detail/unknown] Error:`, error);
     console.error('Error details:', {
       message: error.message,
       stack: error.stack,

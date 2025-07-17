@@ -6,6 +6,7 @@ interface ServerToClientEvents {
     welcome: (message: string) => void;
     "users:online": (userIds: string[]) => void;
     "chat:message": (data: { to: string; from: string; message: string; timestamp: string }) => void;
+    "notification:new": (data: any) => void;
 }
 
 interface ClientToServerEvents {

@@ -5,12 +5,12 @@ import { NextResponse } from "next/server";
 
 export async function GET(req:Request){
     try{
-        const {userId} = await auth()
-        
-        const clerk = await clerkClient()
-        
-        const user= await clerk.users.getUser(userId);
-        
+        const {userId} = await auth();
+        if (!userId) {
+            return NextResponse.json({ message: "Unauthorized: No user ID found." }, { status: 401 });
+        }
+        const clerk = await clerkClient();
+        const user = await clerk.users.getUser(userId);
         const email = await user?.emailAddresses?.[0]?.emailAddress;
         
     const userData = await prisma.user.findUnique({

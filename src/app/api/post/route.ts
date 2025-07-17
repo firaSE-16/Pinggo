@@ -11,6 +11,9 @@ export async function GET(req:Request){
 
 
     const {userId} = await auth()
+    if (!userId) {
+        return NextResponse.json({ message: "Unauthorized: No user ID found." }, { status: 401 });
+    }
         
         const clerk = await clerkClient()
         

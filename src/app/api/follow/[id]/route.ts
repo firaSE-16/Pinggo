@@ -1,14 +1,13 @@
 import { prisma } from "@/lib/db";
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { NextApiRequest } from "next";
+import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export async function POST(
-  req: NextApiRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Await params to fix sync access error
     const { id } = await params;
 
     // Get authenticated user ID
@@ -21,9 +20,8 @@ export async function POST(
       );
     }
 
-       const clerk = await clerkClient()
-    const user= await clerk.users.getUser(userId);
-  
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(userId);
     const email = await user?.emailAddresses?.[0]?.emailAddress;
 
     if (!email) {
@@ -48,15 +46,12 @@ export async function POST(
       );
     }
 
-    
-
     const currentProfile = await prisma.user.findUnique({
       where: { email },
       select: {
-        id:true,
+        id: true,
       },
     });
-    
 
     if (!currentProfile) {
       return NextResponse.json(
@@ -65,12 +60,9 @@ export async function POST(
       );
     }
 
-
     const newFollow = await prisma.userFollow.create({
-                data:{ followerId:currentProfile.id ,
-             followedId:id}
-
-    })
+      data: { followerId: currentProfile.id, followedId: id }
+    });
 
     return NextResponse.json(
       {

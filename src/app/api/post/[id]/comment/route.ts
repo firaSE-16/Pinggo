@@ -2,9 +2,9 @@ import { prisma } from "@/lib/db";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const postId = params.id;
+    const { id: postId } = await params;
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized: No user ID found." }, { status: 401 });
