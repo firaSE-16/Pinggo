@@ -8,9 +8,7 @@ const nextConfig: NextConfig = {
       // add other allowed domains here if needed
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ["uploadthing"],
-  },
+  serverExternalPackages: ["uploadthing"],
   async headers() {
     return [
       {
