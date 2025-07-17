@@ -30,38 +30,59 @@ export async function GET() {
       );
     }
 
-    // Step 3: Find user profile in the database
+
     const profile = await prisma.user.findUnique({
       where: { email },
       select:{
-        id: true,
-   username: true,
-   email: true,
-   password: false,
-   fullName: true,
-   bio: true,
-   avatarUrl: true,
-   location: true,
-   isPrivate: true,
-   createdAt: true,
-   updatedAt: true,
-   posts: true,
-   comments: true,
-   bookmarks: true,
-   reels: true,
-   stories: true,
-   mentions: true,
-   notifications: true,
-   liveRooms: true,
-   sentMessages: true,
-   receivedMessages: true,
-   events: true,
-   like: true,
-   followers: true,
-   following: true,
-   groupOnwer: true,
-   groupMember: true,
-   _count: true}
+      id: true,
+      username: true,
+      email: true,
+      password: false,
+      fullName: true,
+      bio: true,
+      avatarUrl: true,
+      location: true,
+      isPrivate: true,
+      createdAt: true,
+      updatedAt: true,
+      posts: {
+        include: {
+       user:true,
+        
+        likes:{
+          include:{
+            user:true
+          }
+        },
+        mediat:true,
+        comments: {
+          include: {
+            user: true, 
+          },
+        },
+      }},
+      comments: true,
+      bookmarks: true,
+      reels:  {
+        include:{
+            user:true
+        }},
+      stories: {include:{
+            user:true
+        }},
+      mentions: true,
+      notifications: true,
+      liveRooms: true,
+      sentMessages: true,
+      receivedMessages: true,
+      events: true,
+      like: true,
+      followers: true,
+      following: true,
+      groupOnwer: true,
+      groupMember: true,
+      _count: true
+    }
     });
 
     if (!profile) {
@@ -116,8 +137,7 @@ export async function POST(req:Request){
       );
     }
 
-    const {
-        
+    const { 
         username,
         password,
         fullName,

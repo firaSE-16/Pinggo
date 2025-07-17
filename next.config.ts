@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  image:{
-    domains:['utfs.io']
+  images: {
+    domains: [
+      'img.clerk.com',
+      'utfs.io',
+      // add other allowed domains here if needed
+    ],
   },
   experimental: {
     serverComponentsExternalPackages: ["uploadthing"],

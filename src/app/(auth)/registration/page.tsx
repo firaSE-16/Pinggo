@@ -1,6 +1,6 @@
 "use client";
 import { toast } from 'sonner'
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -17,63 +17,154 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { UploadButton } from "@/utils/uploadthing";
 import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
-import { Shield, UserPlus, ArrowRight } from "lucide-react";
+import { Shield, UserPlus, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import axios from 'axios'
-import Loading from '@/components/loading';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 
 const registrationSchema = z.object({
-  username: z.string().min(2).max(50),
-  email: z.string().email(),
-  password: z.string().min(7).max(50),
-  fullName: z.string().min(2).max(100),
+  username: z.string().min(2, "Username must be at least 2 characters").max(50),
+  fullName: z.string().min(2, "Full name must be at least 2 characters").max(100),
   bio: z.string().min(2).max(100).optional(),
   avatarUrl: z.string().url().optional(),
 });
 
 const Page = () => {
   const [loading, setLoading] = useState(false);
-  const { user } = useUser();
+  const [checkingRegistration, setCheckingRegistration] = useState(true);
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
+  const [formErrors, setFormErrors] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof registrationSchema>>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
       username: "",
-      email: user?.emailAddresses[0]?.emailAddress || "",
-      password: "",
       fullName: "",
       bio: "",
       avatarUrl: "",
     },
   });
 
-  // Sync uploaded image with form state
-  React.useEffect(() => {
+  // Check if user already exists in database
+  useEffect(() => {
+    const checkExistingUser = async () => {
+      if (!isLoaded || !user) {
+        return;
+      }
+
+      try {
+        setCheckingRegistration(true);
+        const response = await api.get('/user/check-registration');
+        
+        console.log('Registration page check response:', response.data);
+        
+        if (response.data.exists === true) {
+          console.log('User exists in registration page, redirecting to home');
+          toast.success("Welcome back! Redirecting to your home page.");
+          router.push('/home');
+          return;
+        } else {
+          console.log('User does not exist, showing registration form');
+        }
+      } catch (error) {
+        console.error('Error checking user registration:', error);
+        // If there's an error, continue with registration
+      } finally {
+        setCheckingRegistration(false);
+      }
+    };
+
+    checkExistingUser();
+  }, [user, isLoaded, router]);
+
+  // Pre-fill form with Clerk user data
+  useEffect(() => {
+    if (user && isLoaded && !checkingRegistration) {
+      form.setValue('fullName', user.fullName || '');
+      if (user.imageUrl) {
+        setUploadedImageUrl(user.imageUrl);
+        form.setValue('avatarUrl', user.imageUrl);
+      }
+    }
+  }, [user, isLoaded, form, checkingRegistration]);
+
+  useEffect(() => {
     if (uploadedImageUrl) {
       form.setValue('avatarUrl', uploadedImageUrl);
     }
   }, [uploadedImageUrl, form]);
 
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.push('/sign-in');
+    }
+  }, [isLoaded, user, router]);
+
   async function onSubmit(values: z.infer<typeof registrationSchema>) {
     try {
+      console.log("Form values before submission:", values);
       setLoading(true);
-      console.log("Form submission values:", values);
+      setFormErrors([]);
       
+      // Validate the form again before submission
+      const result = registrationSchema.safeParse(values);
+      if (!result.success) {
+        const errors = result.error.errors.map(err => err.message);
+        setFormErrors(errors);
+        console.error("Validation errors:", errors);
+        toast.error("Please fix the form errors");
+        return;
+      }
+
       const response = await axios.post("/api/registration", values);
+      console.log("API Response:", response.data);
       
       if (response.data.success) {
         toast.success("Account created successfully!");
-        console.log("Registration successful:", response.data);
+        router.push('/home');
       } else {
         throw new Error(response.data.message || "Registration failed");
       }
     } catch (error: any) {
       console.error("Registration error:", error);
-      toast.error(error.response?.data?.message || error.message || "Registration failed");
+      let errorMessage = "Registration failed";
+      
+      if (error.response) {
+        errorMessage = error.response.data?.message || error.response.statusText;
+      } else if (error.request) {
+        errorMessage = "No response from server";
+      } else {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
+  }
+
+  // Show loading while checking authentication or registration status
+  if (!isLoaded || !user || checkingRegistration) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+          <p className="text-lg font-medium">
+            {checkingRegistration ? "Checking your registration..." : "Loading..."}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {checkingRegistration 
+              ? "Please wait while we verify your account status" 
+              : "Please wait while we load your information"
+            }
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -130,7 +221,7 @@ const Page = () => {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="text-lg text-foreground/80 max-w-xl mx-auto"
             >
-              Join our community of creators and connect with your audience in meaningful ways.
+              Welcome! Let's set up your profile to get you started.
             </motion.p>
           </div>
 
@@ -143,189 +234,163 @@ const Page = () => {
           >
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-8">
-                {!loading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-foreground/80">Username</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Enter your username"
-                              {...field}
-                              className="rounded-lg h-12"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-foreground/80">Password</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="••••••••"
-                              {...field}
-                              className="rounded-lg h-12"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-foreground/80">Full Name</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Enter your full name"
-                              {...field}
-                              className="rounded-lg h-12"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="bio"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-foreground/80">Bio (Optional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Tell us about yourself"
-                              {...field}
-                              className="rounded-lg h-12"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="md:col-span-2">
-                      <FormField
-                        control={form.control}
-                        name="avatarUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-foreground/80">
-                              Profile Picture (Optional)
-                            </FormLabel>
-                            <FormControl>
-                              <div className="space-y-4">
-                                {uploadedImageUrl && (
-                                  <div className="flex items-center justify-center">
-                                    <div className="relative">
-                                      <img
-                                        src={uploadedImageUrl}
-                                        alt="Profile preview"
-                                        className="w-24 h-24 rounded-full object-cover border-2 border-primary"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setUploadedImageUrl("");
-                                          field.onChange("");
-                                        }}
-                                        className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-destructive/90"
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="rounded-lg border border-dashed border-border p-6">
-                                  <UploadButton
-                                    endpoint="imageUploader"
-                                    onClientUploadComplete={(res) => {
-                                      if (res?.[0]?.url) {
-                                        setUploadedImageUrl(res[0].url);
-                                        form.setValue('avatarUrl', res[0].url);
-                                      }
-                                    }}
-                                    onUploadError={(error: Error) => {
-                                      console.error("Upload error:", error);
-                                      toast.error(`Upload failed: ${error.message}`);
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className='flex flex-col gap-10 justify-center items-center h-80'>
-                    <Loading/>
-                    <p className='3xl font-bold'>Just a moment...</p>
+                {/* Display form-level errors */}
+                {formErrors.length > 0 && (
+                  <div className="bg-destructive/10 p-4 rounded-lg border border-destructive">
+                    <p className="text-destructive font-medium">Please fix the following errors:</p>
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      {formErrors.map((error, index) => (
+                        <li key={index} className="text-destructive text-sm">{error}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
-                <div className="flex items-start space-x-3">
-                  <Shield className="w-5 h-5 text-primary mt-0.5" />
-                  <p className="text-sm text-foreground/70">
-                    By creating an account, you agree to our{" "}
-                    <Link href="/terms" className="text-primary hover:underline">
-                      Terms of Service
-                    </Link>{" "}
-                    and{" "}
-                    <Link href="/privacy" className="text-primary hover:underline">
-                      Privacy Policy
-                    </Link>
-                    .
-                  </p>
+                {/* Avatar Upload Section */}
+                <div className="space-y-4">
+                  <FormLabel className="text-base font-medium">Profile Picture</FormLabel>
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                      {uploadedImageUrl ? (
+                        <div className="relative">
+                          <Image
+                            src={uploadedImageUrl}
+                            alt="Profile preview"
+                            width={96}
+                            height={96}
+                            className="w-24 h-24 rounded-full object-cover border-2 border-border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUploadedImageUrl("");
+                              form.setValue('avatarUrl', "");
+                            }}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs hover:bg-destructive/90 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-muted border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
+                          <UserPlus className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <UploadButton
+                      endpoint="mediaUploader"
+                      onClientUploadComplete={(res) => {
+                        if (res && res[0]) {
+                          setUploadedImageUrl(res[0].url);
+                          toast.success("Image uploaded successfully!");
+                        }
+                      }}
+                      onUploadError={(error: Error) => {
+                        toast.error(`Upload failed: ${error.message}`);
+                      }}
+                      className="ut-button:bg-primary ut-button:text-primary-foreground ut-button:hover:bg-primary/90 ut-button:rounded-lg ut-button:px-4 ut-button:py-2"
+                    />
+                  </div>
                 </div>
 
+                {/* Username Field */}
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">Username</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter your username"
+                          className="h-12 text-base"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Full Name Field */}
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">Full Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter your full name"
+                          className="h-12 text-base"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Bio Field */}
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base font-medium">Bio (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Tell us about yourself..."
+                          className="h-12 text-base"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Submit Button */}
                 <motion.div
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  className="pt-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                  className="pt-4"
                 >
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full cursor-pointer rounded-[10px] h-12 text-lg font-medium"
+                    className="w-full h-12 text-base font-medium bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors"
                   >
-                    Complete Account <ArrowRight className="w-4 h-4 ml-2" />
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Account...
+                      </>
+                    ) : (
+                      <>
+                        Complete Registration
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
                   </Button>
+                </motion.div>
+
+                {/* Privacy Notice */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.7 }}
+                  className="text-center text-sm text-muted-foreground"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    <span>Your data is protected and secure</span>
+                  </div>
                 </motion.div>
               </form>
             </Form>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            className="text-center mt-8 text-foreground/70 text-sm"
-          >
-            Need help?{" "}
-            <Link href="/support" className="text-primary hover:underline">
-              Contact Support
-            </Link>{" "}
-            or{" "}
-            <Link href="/faq" className="text-primary hover:underline">
-              FAQ
-            </Link>
           </motion.div>
         </motion.div>
       </div>

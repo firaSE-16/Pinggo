@@ -7,11 +7,12 @@ export async function GET(req:Request){
 
     try{
         
-    const user = await auth()
     
-    if(user!) return NextResponse.json({message:"Unauthorized"},{status:401})
-
-    const reels = await prisma.reel.findMany()
+const reels = await prisma.reel.findMany({
+    include:{
+        user:true
+    }
+})
 
     if(!reels) return NextResponse.json({message:"Reels not found."},{status:404})
 

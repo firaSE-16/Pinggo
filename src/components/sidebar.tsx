@@ -4,6 +4,8 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
+import { NotificationBell } from "./NotificationBell";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const menus = [
     {
@@ -19,9 +21,9 @@ const menus = [
         notification: false
     },
     {
-        title: "Geomap",
+        title: "Explore",
         icon: Map,
-        route: "/geomap",
+        route: "/explore",
         notification: false
     },
     {
@@ -47,6 +49,7 @@ const menus = [
 const Sidebar = () => {
     const [setting, setSetting] = useState(false);
     const [chat,setChat]=useState(false)
+    const { unreadCount } = useNotifications();
     
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
         if (typeof window !== 'undefined') {
@@ -101,11 +104,16 @@ const Sidebar = () => {
                             <span className={clsx("text-sm lg:text-lg font-medium ",chat===true?"md:hidden":"md:hidden lg:inline")}>{menu.title}</span>
                         </Link>
 
-                        {menu.notification && (
+                        {menu.notification && unreadCount > 0 && (
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                         )}
                     </div>
                 ))}
+            </div>
+
+            {/* Notification Bell */}
+            <div className="w-full flex justify-center">
+                <NotificationBell className="w-10 h-10" />
             </div>
 
             <div className="relative pt-10 lg:top-1 mb-5">
@@ -123,7 +131,7 @@ const Sidebar = () => {
                     onClick={() => setSetting(prev => !prev)}
                 >
                     <Menu size={24} className="lg:w-8 lg:h-8" />
-                    <span className={clsx("text-sm lg:text-xl hidden lg:inline"),chat?"hidden":""}>Settings</span>
+                    <span className={clsx("text-sm lg:text-xl hidden lg:inline", chat ? "hidden" : "")}>Settings</span>
                 </span>
             </div>
         </div>

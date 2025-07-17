@@ -69,10 +69,13 @@ model User {
 }
 
 model UserFollow{
+
   follower   User   @relation("following", fields: [followerId], references: [id])
   followed   User   @relation("followers", fields: [followedId], references: [id])
+  
   followerId String
   followedId String
+
   createdAt  DateTime @default(now())
 
   @@id([followerId, followedId])
@@ -81,13 +84,11 @@ model UserFollow{
 model Post {
   id        String   @id @default(uuid())
   content   String?
-  mediat Media[]
+  mediat    Media[]
   location  String?
   createdAt DateTime @default(now())
-
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-
   likes     Like[]
   comments  Comment[]
   bookmarks Bookmark[]
@@ -98,6 +99,7 @@ model Post {
 model Media{
   id  String @id @default(uuid())
   mediaUrl String 
+  mediaType String @default("image")
   postId String
   post Post @relation(fields:[postId],references: [id])
 }

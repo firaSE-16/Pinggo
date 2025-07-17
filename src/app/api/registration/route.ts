@@ -1,11 +1,32 @@
 import { prisma } from "@/lib/db";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcrypt";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    // Step 1: Authenticate user
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return NextResponse.json(
+        { message: "Unauthorized: No user ID found." },
+        { status: 401 }
+      );
+    }
+
+    // Step 2: Get user data from Clerk
+    const clerk = await clerkClient();
+    const clerkUser = await clerk.users.getUser(userId);
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress;
+
+    if (!email) {
+      return NextResponse.json(
+        { message: "Email address not found." },
+        { status: 400 }
+      );
+    }
 
     if (!body) {
       return NextResponse.json(
@@ -14,19 +35,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await auth();
-
-    if (!user) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
+    // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: body.email },
+          { email },
           { username: body.username }
         ]
       }
@@ -37,7 +50,7 @@ export async function POST(req: NextRequest) {
         { 
           message: "User already exists",
           details: {
-            emailExists: existingUser.email === body.email,
+            emailExists: existingUser.email === email,
             usernameExists: existingUser.username === body.username
           }
         },
@@ -45,17 +58,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(body.password, 10);
-
+    // Create user in database (no password needed since Clerk handles authentication)
     const newUser = await prisma.user.create({
       data: {
+        id: userId, // Use Clerk's userId as our database ID
         username: body.username,
-        email: body.email,
-        password: hashedPassword,
+        email: email,
+        password: "", // Empty password since Clerk handles auth
         fullName: body.fullName,
         bio: body.bio || "",
         avatarUrl: body.avatarUrl || "",
-        
       },
     });
 
@@ -65,7 +77,8 @@ export async function POST(req: NextRequest) {
         user: {
           id: newUser.id,
           username: newUser.username,
-          email: newUser.email
+          email: newUser.email,
+          fullName: newUser.fullName
         }
       },
       { status: 201 }

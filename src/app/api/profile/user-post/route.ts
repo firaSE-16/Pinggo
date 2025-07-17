@@ -2,9 +2,8 @@ import { prisma } from "@/lib/db";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export async function POST(req:Request){
-
-    try {
+export async function POST(req: Request) {
+  try {
     // Step 1: Authenticate user
     const { userId } = await auth();
 
@@ -15,10 +14,10 @@ export async function POST(req:Request){
       );
     }
 
-    // Step 2: Get user data from Clerk
+    // Step 2: Get user data from Clerk 
     const clerk = await clerkClient()
-    const user= await clerk.users.getUser(userId);
-    const email = await user?.emailAddresses?.[0]?.emailAddress;
+    const user = await clerk.users.getUser(userId);
+    const email = user.emailAddresses[0]?.emailAddress;
 
     if (!email) {
       return NextResponse.json(
@@ -26,14 +25,20 @@ export async function POST(req:Request){
         { status: 400 }
       );
     }
-    const { content, location, mention, media } = await req.json();
 
-    // Step 3: Find user profile in the database
+    // Step 3: Parse request body
+    const { content, location,mediaUrls } = await req.json();
+ 
+      
+
+
+
+  
+
+    // Step 4: Find user profile in the database
     const profile = await prisma.user.findUnique({
       where: { email },
-      select:{
-        id: true,
-   }
+      select: { id: true }
     });
 
     if (!profile) {
@@ -44,40 +49,41 @@ export async function POST(req:Request){
     }
 
     const newPost = await prisma.post.create({
-    data:{
+      data: {
         content,
         location,
-        userId:profile.id
-    }
+        userId: profile.id
+      }
     });
 
-    await prisma.media.createMany({
-        data:media.map((url: any)=>({
-            mediaUrl:url,
-            postId:newPost.id
-        })) 
-    });
-
-    await prisma.mention.createMany({
-        data:mention.map((mention: { id: any; })=>({
-            mentionId:mention.id,
-            postId:newPost.id 
+    if (mediaUrls && mediaUrls.length > 0) {
+    const newMedia=  await prisma.media.createMany({
+        data: mediaUrls.map((url: {url:string;mediaType:string}) => ({
+          mediaUrl: url.url,
+          mediaType:url.mediaType,
+          postId: newPost.id
         }))
-    });
+      });
+      console.log(newMedia)
+    }
 
-    return NextResponse.json({data:{newPost}},{status:201})
+    return NextResponse.json(
+      { 
+        success: true,
+        data: { post: newPost },
+        message: "Post created successfully!" 
+      },
+      { status: 201 }
+    );
 
-
-
-
-
-}catch(error){
-    console.error(error)
-    NextResponse.json({message:"Internal server Error."},{status:500})
-
-}
-       
-        
-
-    
+  } catch (error) {
+    console.error("Post creation error:", error);
+    return NextResponse.json(
+      { 
+        success: false,
+        message: "Internal server error" 
+      },
+      { status: 500 }
+    );
+  }
 }
