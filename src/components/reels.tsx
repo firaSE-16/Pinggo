@@ -1,9 +1,10 @@
 "use client";
-import { Share, MoreHorizontal, Volume2, VolumeX } from "lucide-react";
+import { Share, MoreHorizontal, Volume2, VolumeX, Sparkles } from "lucide-react";
 import Image from "next/image";
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -19,7 +20,6 @@ interface Reel {
   id: string;
   videoUrl: string;
   caption: string | null;
-  
   createdAt: string;
   userId: string;
   user: User;
@@ -48,32 +48,29 @@ const ReelSkeleton = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col w-full max-w-[400px] border rounded-xl overflow-hidden bg-card shadow-sm"
+      className="flex flex-col w-full max-w-xl bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg overflow-hidden"
     >
-      <div className="flex justify-between items-center p-2 border-b">
-        <div className="flex gap-2 items-center">
-          <div className="rounded-full w-7 h-7 bg-gray-200 animate-pulse" />
-          <div className="space-y-1">
-            <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
-            <div className="h-2 w-16 bg-gray-200 rounded animate-pulse" />
+      <div className="flex justify-between items-center p-4 border-b border-border/40">
+        <div className="flex gap-3 items-center">
+          <div className="rounded-full w-10 h-10 bg-muted/60 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-28 bg-muted/40 rounded animate-pulse" />
+            <div className="h-3 w-20 bg-muted/30 rounded animate-pulse" />
           </div>
         </div>
-        <div className="h-7 w-7 bg-gray-200 rounded-full animate-pulse" />
+        <div className="h-10 w-10 bg-muted/60 rounded-full animate-pulse" />
       </div>
-
-      <div className="w-full h-[450px] bg-gray-200 animate-pulse" />
-
-      <div className="p-2 space-y-2">
+      <div className="w-full aspect-[9/16] bg-muted/40 animate-pulse" />
+      <div className="p-4 space-y-3">
         <div className="flex justify-between">
-          <div className="flex gap-2">
-            <div className="h-7 w-7 bg-gray-200 rounded-full animate-pulse" />
+          <div className="flex gap-3">
+            <div className="h-8 w-8 bg-muted/60 rounded-full animate-pulse" />
           </div>
-          <div className="h-7 w-7 bg-gray-200 rounded-full animate-pulse" />
+          <div className="h-8 w-8 bg-muted/60 rounded-full animate-pulse" />
         </div>
-
-        <div className="space-y-1">
-          <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
-          <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse" />
+        <div className="space-y-2">
+          <div className="h-4 w-full bg-muted/40 rounded animate-pulse" />
+          <div className="h-4 w-3/4 bg-muted/30 rounded animate-pulse" />
         </div>
       </div>
     </motion.div>
@@ -87,7 +84,6 @@ const Reel = ({ postData, isLoading = false }: ReelProps) => {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const reelRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-
   const user = {
     id: postData.data.id,
     username: postData.data.username,
@@ -97,11 +93,8 @@ const Reel = ({ postData, isLoading = false }: ReelProps) => {
     email: postData.data.email,
     location: postData.data.location,
   };
-  
 
-
-  const userReels = postData.data.reels
-  console.log(userReels[0])
+  const userReels = postData.data.reels;
 
   const toggleMute = (index: number) => {
     setMutedStates(prev => ({
@@ -192,7 +185,7 @@ const Reel = ({ postData, isLoading = false }: ReelProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col overflow-y-auto gap-4 w-full items-center scrollbar-hide py-2 bg-background text-foreground">
+      <div className="flex flex-col gap-6 w-full items-center py-4">
         {[...Array(3)].map((_, index) => (
           <ReelSkeleton key={index} />
         ))}
@@ -202,128 +195,153 @@ const Reel = ({ postData, isLoading = false }: ReelProps) => {
 
   if (!isLoading && (!userReels || userReels.length === 0)) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-8">
-        <div className="text-center space-y-2">
-          <div className="text-muted-foreground text-lg">No reels yet</div>
-          <p className="text-muted-foreground text-sm">When you create reels, they'll appear here</p>
+      <motion.div 
+        className="flex flex-col items-center justify-center h-full py-12"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg p-8 text-center space-y-3 max-w-md">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-lg">Pinggo</span>
+          </div>
+          <div className="text-muted-foreground text-lg font-semibold">No reels yet</div>
+          <p className="text-muted-foreground">When you create reels, they'll appear here</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="flex flex-col overflow-y-auto gap-4 w-full items-center scrollbar-hide py-2 bg-background text-foreground">
-      {userReels.map((reel, index) => {
-        return (
-          <motion.div
-            key={reel.id}
-            ref={el => {
-              reelRefs.current[index] = el;
-            }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="flex flex-col w-full max-w-[400px] border rounded-xl overflow-hidden bg-card shadow-sm"
-          >
-            <div className="flex justify-between items-center p-2 border-b">
-              <div className="flex gap-2 items-center">
-                <Image
-                  src={reel.user.avatarUrl || "/default-profile.png"}
-                  width={32}
-                  height={32}
-                  alt={`${reel.user.username}'s profile`}
-                  className="rounded-full w-7 h-7 border border-primary/30 object-cover"
+    <div className="flex flex-col gap-6 w-full items-center py-4">
+      {userReels.map((reel, index) => (
+        <motion.div
+          key={reel.id}
+          ref={el => { reelRefs.current[index] = el; }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.05 }}
+          className="flex flex-col w-full max-w-xl bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg overflow-hidden"
+        >
+          {/* Reel Header */}
+          <div className="flex justify-between items-center p-4 border-b border-border/40">
+            <div className="flex gap-3 items-center">
+              <Image
+                src={reel.user.avatarUrl || "/default-profile.png"}
+                width={40}
+                height={40}
+                alt={`${reel.user.username}'s profile`}
+                className="rounded-full w-10 h-10 border-2 border-primary/30 object-cover"
+              />
+              <div>
+                <p className="font-bold text-base">{reel.user.username}</p>
+                {reel.user.location && (
+                  <p className="text-muted-foreground text-xs">
+                    {reel.user.location}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full h-10 w-10 hover:bg-primary/10"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Video Content */}
+          <div className="relative w-full aspect-[9/16] bg-black flex items-center justify-center">
+            {reel.videoUrl && !mediaErrors[index] ? (
+              <>
+                <video
+                  ref={el => { videoRefs.current[index] = el; }}
+                  className="w-full h-full object-cover"
+                  src={reel.videoUrl}
+                  loop
+                  muted={mutedStates[index] ?? true}
+                  playsInline
+                  onClick={() => toggleVideoPlay(index)}
+                  onError={() => setMediaErrors(prev => ({ ...prev, [index]: true }))}
                 />
-                <div>
-                  <p className="font-medium text-sm">{reel.user.username}</p>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" className="rounded-full h-7 w-7">
-                <MoreHorizontal className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-
-            <div className="w-full h-[450px] bg-black flex items-center justify-center relative">
-              {reel.videoUrl && !mediaErrors[index] ? (
-                <>
-                  <video
-                    ref={el => {
-                      videoRefs.current[index] = el;
-                    }}
-                    className="w-full h-full object-cover cursor-pointer"
-                    src={reel.videoUrl}
-                    loop
-                    muted={mutedStates[index] ?? true}
-                    playsInline
+                
+                {playingIndex !== index && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center cursor-pointer"
                     onClick={() => toggleVideoPlay(index)}
-                    onError={() => {
-                      console.error(`Error loading video for reel ${reel.id}`);
-                      setMediaErrors(prev => ({ ...prev, [index]: true }));
-                    }}
                   >
-                    <source src={reel.videoUrl} type="video/mp4" />
-                    <source src={reel.videoUrl} type="video/webm" />
-                    Your browser does not support the video tag.
-                  </video>
-                  {playingIndex !== index && (
-                    <div
-                      className="absolute inset-0 flex items-center justify-center cursor-pointer"
-                      onClick={() => toggleVideoPlay(index)}
-                    >
-                      <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
+                    <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
                     </div>
+                  </div>
+                )}
+                
+                <button
+                  className="absolute bottom-4 right-4 bg-black/50 rounded-full p-2 shadow-lg hover:bg-primary/80 transition-colors"
+                  onClick={e => {
+                    e.stopPropagation();
+                    toggleMute(index);
+                  }}
+                >
+                  {mutedStates[index] ?? true ? (
+                    <VolumeX className="w-5 h-5 text-white" />
+                  ) : (
+                    <Volume2 className="w-5 h-5 text-white" />
                   )}
-                  <button
-                    className="absolute bottom-2 right-2 bg-black/50 rounded-full p-1.5"
-                    onClick={e => {
-                      e.stopPropagation();
-                      toggleMute(index);
-                    }}
-                  >
-                    {mutedStates[index] ?? true ? (
-                      <VolumeX className="w-3.5 h-3.5 text-white" />
-                    ) : (
-                      <Volume2 className="w-3.5 h-3.5 text-white" />
-                    )}
-                  </button>
-                </>
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                  <p className="text-gray-500">{mediaErrors[index] ? "Error loading video" : "No video available"}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-2">
-              <div className="flex justify-between items-center mb-1">
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full hover:bg-primary/10 h-7 w-7"
-                  >
-                    <Share className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {reel.caption && (
-                <p className="mb-1 text-xs">
-                  <span className="font-semibold">{reel.user.username}</span> <span>{reel.caption}</span>
+                </button>
+              </>
+            ) : (
+              <div className="w-full h-full bg-muted/40 flex items-center justify-center">
+                <p className="text-muted-foreground">
+                  {mediaErrors[index] ? "Error loading video" : "No video available"}
                 </p>
-              )}
+              </div>
+            )}
+          </div>
+
+          {/* Caption and Actions */}
+          <div className="p-4 space-y-3">
+            {/* Caption */}
+            {reel.caption && (
+              <p className="text-sm text-foreground">
+                <span className="font-semibold">{reel.user.username}</span>{" "}
+                <span>{reel.caption}</span>
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-between items-center pt-2">
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full h-9 w-9 hover:bg-primary/10"
+                >
+                  <Share className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              <p className="text-muted-foreground text-xs">
+                {new Date(reel.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
             </div>
-          </motion.div>
-        );
-      })}
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 };

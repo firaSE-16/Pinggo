@@ -18,20 +18,20 @@ export async function GET(req:Request){
             email
         },
         include:{
-            followers:true
-        }          
+            followers:true,
+            following:true
+        },        
     })
     if(!userData) return NextResponse.json({success:true,message:"User is not found."},{status:404})
         
-        const followerIds = userData.followers.map((f)=>f.followedId)
+        const followerIds = userData.following.map((f)=>f.followedId)
         followerIds.push(userData.id)
+        
         const stories = await prisma.story.findMany({
             where:  {
                 userId:{
                 in:followerIds
-            },createdAt:{
-                gte:new Date(Date.now()- 24 * 60 * 60 * 1000)
-            }
+            },
         } ,        
             include:{
                 user:true

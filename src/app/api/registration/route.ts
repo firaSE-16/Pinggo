@@ -35,30 +35,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email },
-          { username: body.username }
-        ]
-      }
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { 
-          message: "User already exists",
-          details: {
-            emailExists: existingUser.email === email,
-            usernameExists: existingUser.username === body.username
-          }
-        },
-        { status: 409 }
-      );
-    }
-
-    // Create user in database (no password needed since Clerk handles authentication)
+    // Directly create user in database (no duplicate check, Clerk is source of truth)
     const newUser = await prisma.user.create({
       data: {
         id: userId, // Use Clerk's userId as our database ID

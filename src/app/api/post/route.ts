@@ -23,12 +23,13 @@ export async function GET(req:Request){
             email
         },
         include:{
-            followers:true
+            followers:true,
+            following:true
         }          
     })
     if(!userData) return NextResponse.json({success:true,message:"User is not found."},{status:404})
         
-        const followerIds = userData.followers.map((f)=>f.followedId)
+       const followerIds = userData.following.map((f)=>f.followedId)
         followerIds.push(userData.id)
         const posts = await prisma.post.findMany({
             where:  {

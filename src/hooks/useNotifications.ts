@@ -48,7 +48,7 @@ export const useNotifications = (): UseNotificationsReturn => {
       setError(null);
       const [fetchedNotifications, fetchedSettings] = await Promise.all([
         fetchNotifications(),
-        getNotificationSettings()
+        getNotificationSettings() // Now returns local defaults
       ]);
       setNotifications(fetchedNotifications);
       setSettings(fetchedSettings);

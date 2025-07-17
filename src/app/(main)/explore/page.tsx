@@ -1,7 +1,5 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,330 +10,146 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Loader2, User, FileText, Film, Sparkles, AlertCircle } from "lucide-react";
-import Post from "@/components/post";
-import Reel from "@/components/reels";
 import { useSearch } from "@/hooks/useSearch";
-import { useProfile } from "@/hooks/useProfile";
 import { useRouter } from "next/navigation";
 import Link from 'next/link';
 import { ExploreSkeleton, ErrorState } from "@/components/skeletons/UniversalSkeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ExploreGrid from '@/components/ExploreGrid';
+import FloatingActionBar from '@/components/FloatingActionBar';
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+const trendingTopics = [
+  '#devlife', '#react', '#nextjs', '#design', '#music', '#travel', 
+  '#art', '#fun', '#trending', '#explore', '#coding', '#startup', 
+  '#ai', '#photography', '#gaming', '#fashion', '#food', '#fitness', 
+  '#memes', '#inspiration'
+];
 
 const Explore = () => {
-  const [query, setQuery] = useState("");
-  const [searchType, setSearchType] = useState("username");
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState('all');
+  const [searchActive, setSearchActive] = useState(false);
 
-  const { data, isLoading, error, refetch } = useSearch(debouncedQuery, searchType);
-  const { data: user, isLoading: isLoadingProfile } = useProfile();
+  // Individual search hooks for each type
+  const userSearch = useSearch(searchQuery, 'username');
+  const postSearch = useSearch(searchQuery, 'posts');
+  const reelSearch = useSearch(searchQuery, 'reels');
+
+  // For 'all', merge results
+  let searchResults: any[] = [];
+  let isLoading = false;
+  let error = null;
   
-  const router = useRouter();
-
-  // Fix hydration issues
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query);
-      if (query) {
-        setIsFirstLoad(false);
-        setHasSearched(true);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query) {
-      setIsFirstLoad(false);
-      setHasSearched(true);
+  if (searchActive && searchQuery.trim().length >= 2) {
+    if (searchType === 'all') {
+      isLoading = userSearch.isLoading || postSearch.isLoading || reelSearch.isLoading;
+      error = userSearch.error || postSearch.error || reelSearch.error;
+      searchResults = [
+        ...(userSearch.data || []).map((u: any) => ({ ...u, type: 'user' })),
+        ...(postSearch.data || []).map((p: any) => ({ ...p, type: 'post' })),
+        ...(reelSearch.data || []).map((r: any) => ({ ...r, type: 'reel' })),
+      ];
+    } else if (searchType === 'username') {
+      isLoading = userSearch.isLoading;
+      error = userSearch.error;
+      searchResults = (userSearch.data || []).map((u: any) => ({ ...u, type: 'user' }));
+    } else if (searchType === 'posts') {
+      isLoading = postSearch.isLoading;
+      error = postSearch.error;
+      searchResults = (postSearch.data || []).map((p: any) => ({ ...p, type: 'post' }));
+    } else if (searchType === 'reels') {
+      isLoading = reelSearch.isLoading;
+      error = reelSearch.error;
+      searchResults = (reelSearch.data || []).map((r: any) => ({ ...r, type: 'reel' }));
     }
-  };
-
-  const getSearchTypeIcon = () => {
-    switch (searchType) {
-      case "username":
-      case "fullName":
-        return <User className="h-4 w-4" />;
-      case "posts":
-        return <FileText className="h-4 w-4" />;
-      case "reels":
-        return <Film className="h-4 w-4" />;
-      default:
-        return <Search className="h-4 w-4" />;
-    }
-  };
-
-  // Suggested searches for first load
-  const suggestedSearches = [
-    { type: "username", query: "popular_users" },
-    { type: "posts", query: "trending_posts" },
-    { type: "reels", query: "viral_reels" },
-  ];
-
-  // Show skeleton while mounting
-  if (!mounted) {
-    return <ExploreSkeleton />;
   }
 
+  const handleSearch = (query: string, type: string) => {
+    setSearchQuery(query);
+    setSearchType(type);
+    setSearchActive(true);
+  };
+
   return (
-    <div className="min-h-screen w-full bg-background">
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Search Form */}
-        <Card className="border-border/50 bg-background/95 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
-              <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-              Explore
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search usernames, posts, reels..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="w-full pl-12 h-12 md:h-14 text-base"
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Select 
-                  value={searchType} 
-                  onValueChange={setSearchType}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="w-full sm:w-[200px] h-12 rounded-lg border border-input shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center gap-2">
-                      {getSearchTypeIcon()}
-                      <SelectValue placeholder="Search by" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg border shadow-md">
-                    <SelectItem value="username" className="flex items-center gap-2 py-2 px-3 cursor-pointer">
-                      <User className="h-4 w-4" />
-                      <span>Username</span>
-                    </SelectItem>
-                    <SelectItem value="fullName" className="flex items-center gap-2 py-2 px-3 cursor-pointer">
-                      <User className="h-4 w-4" />
-                      <span>Full Name</span>
-                    </SelectItem>
-                    <SelectItem value="posts" className="flex items-center gap-2 py-2 px-3 cursor-pointer">
-                      <FileText className="h-4 w-4" />
-                      <span>Posts</span>
-                    </SelectItem>
-                    <SelectItem value="reels" className="flex items-center gap-2 py-2 px-3 cursor-pointer">
-                      <Film className="h-4 w-4" />
-                      <span>Reels</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button 
-                  type="submit" 
-                  disabled={isLoading || query.length < 2} 
-                  className="w-full sm:w-auto min-w-[120px] h-12 rounded-lg flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4" />
-                      <span className="hidden sm:inline">Search</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Search Results */}
-        <div className="space-y-6">
-          {isFirstLoad && !hasSearched && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {[...Array(8)].map((_, i) => (
-                  <Card 
-                    key={i} 
-                    className="overflow-hidden transition-all hover:scale-[1.02] hover:shadow-md"
-                  >
-                    <CardContent className="p-0">
-                      <div className="relative aspect-square overflow-hidden">
-                        <div className="h-full w-full bg-muted animate-pulse" />
-                      </div>
-                      <div className="p-4">
-                        <div className="mb-2 h-5 w-3/4 bg-muted animate-pulse rounded" />
-                        <div className="h-4 w-1/2 bg-muted animate-pulse rounded" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              
-              <div className="mt-8">
-                <h3 className="mb-4 text-lg font-semibold">Try searching for</h3>
-                <div className="flex flex-wrap gap-3">
-                  {suggestedSearches.map((suggestion, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={() => {
-                        setSearchType(suggestion.type);
-                        setQuery(suggestion.query);
-                      }}
-                    >
-                      {suggestion.type === "username" && <User className="mr-2 h-4 w-4" />}
-                      {suggestion.type === "posts" && <FileText className="mr-2 h-4 w-4" />}
-                      {suggestion.type === "reels" && <Film className="mr-2 h-4 w-4" />}
-                      {suggestion.query.replace('_', ' ')}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {!isFirstLoad && isLoading && (
-            <div className="flex flex-col items-center justify-center gap-4 py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">Searching for {searchType}...</p>
-            </div>
-          )}
-
-          {error && (
-            <Alert className="border-destructive/50">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p className="font-medium">Search Error</p>
-                  <p className="text-sm">{error}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      setHasSearched(false);
-                      refetch();
-                    }}
-                  >
-                    Try Again
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {!isFirstLoad && !query && !isLoading && !error && (
-            <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-              <Search className="h-12 w-12 text-muted-foreground" />
-              <h3 className="text-xl font-semibold">Start Exploring</h3>
-              <p className="max-w-md text-muted-foreground">
-                Search for people, posts, or reels to discover amazing content and connect with
-                others in your community.
-              </p>
-            </div>
-          )}
-
-          {!isFirstLoad && query && data.length === 0 && !isLoading && !error && (
-            <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-              <Search className="h-12 w-12 text-muted-foreground" />
-              <h3 className="text-xl font-semibold">No Results Found</h3>
-              <p className="max-w-md text-muted-foreground">
-                We couldn't find any {searchType} matching "{query}". Try a different search term.
-              </p>
-            </div>
-          )}
-
-          {!isFirstLoad && query && data.length > 0 && !isLoading && !error && (
-            <>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 className="text-lg font-semibold">
-                  Results for <span className="text-primary">"{query}"</span>
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {data.length} {data.length === 1 ? 'result' : 'results'} found
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                {data.map((item: any, index: number) => (
-                  <Card key={index} className="overflow-hidden transition-all hover:shadow-md">
-                    <CardContent className="p-0">
-                      {searchType === "username" || searchType === "fullName" ? (
-                        <div className="p-6">
-                          <div className="flex items-center gap-4">
-                            <Avatar className="h-16 w-16">
-                              <AvatarImage src={item.avatarUrl} alt={item.username} />
-                              <AvatarFallback>{item.username?.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <h4 className="text-lg font-semibold">{item.username}</h4>
-                              <p className="text-muted-foreground">{item.fullName}</p>
-                              {item.bio && (
-                                <p className="text-sm text-muted-foreground mt-1">{item.bio}</p>
-                              )}
-                            </div>
-                            <Button
-                              variant="outline"
-                              onClick={() => router.push(`/other-details/${item.id}`)}
-                            >
-                              View Profile
-                            </Button>
-                          </div>
-                        </div>
-                      ) : searchType === "posts" ? (
-                        <Post
-                          postData={{
-                            success: true,
-                            data: {
-                              id: user?.id || "",
-                              username: user?.username || "",
-                              email: user?.email || "",
-                              fullName: user?.fullName || "",
-                              bio: user?.bio || "",
-                              avatarUrl: user?.avatarUrl || "",
-                              location: user?.location || "",
-                              posts: [item],
-                            },
-                          }}
-                        />
-                      ) : searchType === "reels" ? (
-                        <Reel 
-                          postData={{
-                            success: true,
-                            data: {
-                              id: item.user?.id || "",
-                              username: item.user?.username || "",
-                              email: item.user?.email || "",
-                              fullName: item.user?.fullName || "",
-                              bio: item.user?.bio || "",
-                              avatarUrl: item.user?.avatarUrl || "",
-                              location: item.user?.location || "",
-                              reels: [item],
-                            },
-                          }}
-                        />
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </>
-          )}
+    <div className="min-h-screen w-full bg-background flex flex-col">
+      {/* Pinggo Header */}
+      <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border/40 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-xl">Pinggo</span>
+        </div>
+        <div className="hidden md:flex items-center gap-4">
+          <Button variant="ghost" className="text-foreground/80 hover:text-foreground">
+            Home
+          </Button>
+          <Button variant="ghost" className="text-foreground/80 hover:text-foreground">
+            Explore
+          </Button>
         </div>
       </div>
+
+      {/* Trending Hashtags/Topics */}
+      <div className="w-full px-4 md:px-6 pt-6 pb-4 sticky top-16 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide md:flex-wrap md:justify-center">
+          {trendingTopics.map((topic, i) => (
+            <motion.button
+              key={topic}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium",
+                "bg-card/80 backdrop-blur-lg border border-border/40",
+                "hover:bg-primary/10 hover:text-primary transition-colors",
+                "shadow-sm hover:shadow-md"
+              )}
+            >
+              {topic}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Explore Grid */}
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 pb-24">
+        <ExploreGrid
+          items={searchActive && searchQuery.trim().length >= 2 ? searchResults : undefined}
+          loading={searchActive && searchQuery.trim().length >= 2 ? isLoading : false}
+          error={searchActive && searchQuery.trim().length >= 2 ? error : null}
+          onClearSearch={() => setSearchActive(false)}
+          searchActive={searchActive}
+        />
+
+        {!searchActive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {/* Placeholder content when not searching */}
+            <Card className="bg-card/80 backdrop-blur-lg border border-border/40 overflow-hidden">
+              <CardHeader className="p-0">
+                <div className="aspect-square bg-muted/40 animate-pulse" />
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full w-8 h-8 bg-muted/60 animate-pulse" />
+                  <div className="h-4 w-24 bg-muted/40 rounded animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+            {/* Add more placeholder cards as needed */}
+          </motion.div>
+        )}
+      </div>
+
+      {/* Floating Action Bar */}
+      <FloatingActionBar onSearch={handleSearch} />
     </div>
   );
 };

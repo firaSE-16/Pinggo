@@ -1,18 +1,19 @@
 'use client';
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Paperclip, Mic, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Send, Paperclip, Mic, MoreVertical, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useChat } from '@/hooks/useChat';
 import { useUser } from '@clerk/nextjs';
 import { getOtherProfile } from '@/services/useOtherService';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { useChatStore } from '@/store/chatStore';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 dayjs.extend(relativeTime);
 
@@ -23,51 +24,89 @@ interface ChatInterfaceProps {
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) => {
   const { id } = useParams();
   const router = useRouter();
-  const { user: currentUser } = useUser();
-  const [newMessage, setNewMessage] = useState('');
+  const { user: currentUser, isLoaded } = useUser();
   const [partner, setPartner] = useState<any>(null);
   const [isLoadingPartner, setIsLoadingPartner] = useState(true);
-  
+  const [profileId, setProfileId] = useState<string | null>(null);
   const partnerId = Array.isArray(id) ? id[0] : id;
-  
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [newMessage, setNewMessage] = useState('');
+
+  // Zustand chat store
   const {
     messages,
     isLoading,
     error,
-    sendMessage,
     isTyping,
     unreadCount,
-    markAsRead
-  } = useChat({ partnerId: partnerId || '' });
+    fetchMessages,
+    sendMessage,
+    connectChatSocket,
+    disconnectChatSocket,
+    clearMessages,
+    online,
+    onlineUsers,
+  } = useChatStore();
 
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  // Fetch current user's profileId from DB (one-time, on mount)
+  useEffect(() => {
+    const fetchProfileId = async () => {
+      try {
+        const res = await fetch('/api/profile/user-detail');
+        const data = await res.json();
+        setProfileId(data.data?.id || null);
+      } catch (e) {
+        setProfileId(null);
+      }
+    };
+    if (isLoaded && currentUser) fetchProfileId();
+  }, [isLoaded, currentUser]);
+
+  // Connect socket and fetch messages when profileId and partnerId are ready
+  useEffect(() => {
+    if (!profileId || !partnerId) return;
+    connectChatSocket(profileId, partnerId);
+    fetchMessages(profileId, partnerId);
+    return () => {
+      disconnectChatSocket();
+      clearMessages();
+    };
+  }, [profileId, partnerId, connectChatSocket, fetchMessages, disconnectChatSocket, clearMessages]);
 
   // Load partner info
   useEffect(() => {
     if (!partnerId) return;
-    
     const loadPartner = async () => {
       try {
         setIsLoadingPartner(true);
         const response = await getOtherProfile(partnerId);
         setPartner(response.data);
       } catch (err) {
-        console.error('Failed to load partner:', err);
+        setPartner(null);
       } finally {
         setIsLoadingPartner(false);
       }
     };
-
     loadPartner();
   }, [partnerId]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollAreaRef.current?.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
+
+  // Format message time
+  const formatMessageTime = (timestamp: string) => dayjs(timestamp).format('HH:mm');
+
+  // Check if message is from current user
+  const isOwnMessage = (message: any) => message.senderId === profileId;
 
   // Handle send message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !partnerId) return;
-    
-    await sendMessage(newMessage.trim());
+    if (!newMessage.trim() || !profileId || !partnerId) return;
+    await sendMessage(profileId, partnerId, newMessage.trim());
     setNewMessage('');
     inputRef.current?.focus();
   };
@@ -80,229 +119,246 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
     }
   };
 
-  // Format message time
-  const formatMessageTime = (timestamp: string) => {
-    return dayjs(timestamp).format('HH:mm');
-  };
-
-  // Check if message is from current user
-  const isOwnMessage = (message: any) => {
-    return message.senderId === currentUser?.id;
-  };
-
   if (!partnerId) {
     return (
-      <div className={`flex flex-col h-full ${className}`}>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(
+          "flex flex-col h-full bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg",
+          className
+        )}
+      >
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h3 className="text-lg font-medium mb-2">Select a chat</h3>
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="font-bold">Pinggo</span>
+            </div>
+            <h3 className="text-xl font-bold">Select a chat</h3>
             <p className="text-muted-foreground">Choose a conversation to start messaging</p>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (isLoadingPartner) {
     return (
-      <div className={`flex flex-col h-full ${className}`}>
-        <div className="p-4 border-b">
-          <div className="flex items-center space-x-3">
-            <Skeleton className="w-10 h-10 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-24" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(
+          "flex flex-col h-full bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg",
+          className
+        )}
+      >
+        <div className="p-6 border-b border-border/40">
+          <div className="flex items-center space-x-4">
+            <Skeleton className="w-12 h-12 rounded-full" />
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-40 rounded" />
+              <Skeleton className="h-4 w-28 rounded" />
             </div>
           </div>
         </div>
-        <div className="flex-1 p-4">
-          <div className="space-y-4">
+        <div className="flex-1 p-6">
+          <div className="space-y-5">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex space-x-3">
-                <Skeleton className="w-8 h-8 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-24" />
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex space-x-4"
+              >
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-3">
+                  <Skeleton className="h-5 w-56 rounded" />
+                  <Skeleton className="h-4 w-32 rounded" />
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (error) {
     return (
-      <div className={`flex flex-col h-full ${className}`}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={cn(
+          "flex flex-col h-full bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg",
+          className
+        )}
+      >
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-destructive mb-2">{error}</p>
-            <Button onClick={() => window.location.reload()} variant="outline">
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="font-bold">Pinggo</span>
+            </div>
+            <p className="text-destructive text-lg font-semibold">{error}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline" 
+              className="rounded-[10px] h-11 px-6"
+            >
               Try Again
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className={`flex flex-col h-full bg-background ${className}`}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={cn(
+        "flex flex-col h-full bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg",
+        className
+      )}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center space-x-3">
+      <div className="flex items-center justify-between p-6 border-b border-border/40">
+        <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => router.back()}
-            className="md:hidden"
+            className="md:hidden rounded-full h-10 w-10"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          
-          <Avatar className="w-10 h-10">
+          <Avatar className="w-12 h-12 border-2 border-primary/30">
             <AvatarImage src={partner?.avatarUrl} />
             <AvatarFallback>
               {partner?.username?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          
           <div>
-            <h3 className="font-medium">
-              {partner?.fullName || partner?.username}
-            </h3>
+            <h3 className="font-bold text-lg">{partner?.fullName || partner?.username}</h3>
             <p className="text-sm text-muted-foreground">
-              {partner?.isOnline ? (
+              {partnerId && onlineUsers.includes(partnerId) ? (
                 <span className="flex items-center">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full mr-2" />
                   Online
                 </span>
               ) : (
-                'Offline'
+                <span className="flex items-center">
+                  <span className="w-2.5 h-2.5 bg-muted-foreground rounded-full mr-2" />
+                  Offline
+                </span>
               )}
             </p>
           </div>
         </div>
-        
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
           <MoreVertical className="w-5 h-5" />
         </Button>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex space-x-3">
-                <Skeleton className="w-8 h-8 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-24" />
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex space-x-4"
+              >
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="space-y-3">
+                  <Skeleton className="h-5 w-56 rounded" />
+                  <Skeleton className="h-4 w-32 rounded" />
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <Send className="w-8 h-8 text-muted-foreground" />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center h-full text-center"
+          >
+            <div className="w-20 h-20 bg-muted/40 rounded-full flex items-center justify-center mb-6">
+              <Send className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium mb-2">Start a conversation</h3>
-            <p className="text-muted-foreground text-sm">
+            <h3 className="text-xl font-bold mb-2">Start a conversation</h3>
+            <p className="text-muted-foreground">
               Send a message to {partner?.fullName || partner?.username} to begin chatting
             </p>
-          </div>
+          </motion.div>
         ) : (
           <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
+            {messages.map((message: any, i: number) => (
+              <motion.div
+                key={message.id || i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 500 }}
                 className={`flex ${isOwnMessage(message) ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`flex space-x-2 max-w-[70%] ${isOwnMessage(message) ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  {!isOwnMessage(message) && (
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={partner?.avatarUrl} />
-                      <AvatarFallback>
-                        {partner?.username?.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                <div
+                  className={cn(
+                    "max-w-[75%] px-4 py-3 rounded-xl text-base font-medium",
+                    "shadow-sm animate-fade-in",
+                    isOwnMessage(message)
+                      ? "bg-primary text-primary-foreground rounded-br-none"
+                      : "bg-muted/40 text-foreground rounded-bl-none border border-border/40"
                   )}
-                  
-                  <div className={`flex flex-col ${isOwnMessage(message) ? 'items-end' : 'items-start'}`}>
-                    <div
-                      className={`
-                        px-4 py-2 rounded-2xl max-w-full break-words
-                        ${isOwnMessage(message)
-                          ? 'bg-primary text-primary-foreground rounded-br-md'
-                          : 'bg-muted text-foreground rounded-bl-md'
-                        }
-                      `}
-                    >
-                      <p className="text-sm">{message.message}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      {formatMessageTime(message.createdAt)}
-                    </span>
-                  </div>
+                >
+                  <span>{message.content}</span>
+                  <span className={cn(
+                    "block text-xs mt-1 text-right",
+                    isOwnMessage(message) ? "text-primary-foreground/80" : "text-muted-foreground"
+                  )}>
+                    {formatMessageTime(message.createdAt)}
+                  </span>
                 </div>
-              </div>
+              </motion.div>
             ))}
-            
-            {/* Typing indicator */}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="flex space-x-2">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={partner?.avatarUrl} />
-                    <AvatarFallback>
-                      {partner?.username?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="bg-muted px-4 py-2 rounded-2xl rounded-bl-md">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </ScrollArea>
 
-      {/* Message Input */}
-      <div className="p-4 border-t">
-        <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
-          <Button type="button" variant="ghost" size="icon">
-            <Paperclip className="w-5 h-5" />
-          </Button>
-          
-          <Input
-            ref={inputRef}
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
-            className="flex-1"
-            disabled={isLoading}
-          />
-          
-          {newMessage.trim() ? (
-            <Button type="submit" size="icon" disabled={isLoading}>
-              <Send className="w-5 h-5" />
-            </Button>
-          ) : (
-            <Button type="button" variant="ghost" size="icon">
-              <Mic className="w-5 h-5" />
-            </Button>
-          )}
-        </form>
-      </div>
-    </div>
+      {/* Input */}
+      <form
+        onSubmit={handleSendMessage}
+        className="flex items-center gap-3 p-4 border-t border-border/40"
+      >
+        <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
+          <Paperclip className="w-5 h-5" />
+        </Button>
+        <Input
+          ref={inputRef}
+          placeholder="Type your message..."
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={handleKeyPress}
+          className="flex-1 h-11 rounded-[10px]"
+        />
+        <Button
+          type="submit"
+          variant="default"
+          disabled={!newMessage.trim()}
+          className="rounded-[10px] h-11 px-4"
+        >
+          <Send className="w-5 h-5" />
+        </Button>
+      </form>
+    </motion.div>
   );
-}; 
+};

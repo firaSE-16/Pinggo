@@ -1,6 +1,7 @@
 import {createServer} from 'node:http';
 import next from 'next';
 import {Server} from "socket.io"
+import type { Server as SocketIOServer } from 'socket.io';
 
 
 const dev = process.env.NODE_ENV !== "production";
@@ -11,6 +12,9 @@ const port = 4000;
 const app=next({dev,hostname,port})
 
 const handler = app.getRequestHandler();
+
+let io: SocketIOServer | undefined;
+let onlineUsers: Map<string, string> | undefined;
 
 app.prepare().then(()=>{
     const httpServer = createServer(async (req, res) => {
@@ -23,31 +27,31 @@ app.prepare().then(()=>{
             res.end('Internal Server Error');
         }
     })
-    const io = new Server(httpServer, {
+    io = new Server(httpServer, {
         cors: {
             origin: '*', // Adjust as needed for production
         },
     })
 
     // Online users: { userId: socketId }
-    const onlineUsers = new Map();
+    onlineUsers = new Map();
 
-    io.on("connection",(socket)=>{
+    io!.on("connection",(socket)=>{
         console.log("New client connected: ",socket.id)
 
         // Listen for user identification
         socket.on("user:online", (userId) => {
-            onlineUsers.set(userId, socket.id);
-            io.emit("users:online", Array.from(onlineUsers.keys()));
+            onlineUsers!.set(userId, socket.id);
+            io!.emit("users:online", Array.from(onlineUsers!.keys()));
             socket.data.userId = userId;
         });
 
         // Listen for chat messages
         socket.on("chat:message", (data) => {
             // data: { to, from, message, timestamp }
-            const toSocketId = onlineUsers.get(data.to);
+            const toSocketId = onlineUsers!.get(data.to);
             if (toSocketId) {
-                io.to(toSocketId).emit("chat:message", data);
+                io!.to(toSocketId).emit("chat:message", data);
             }
             // Optionally, echo to sender for instant UI update
             socket.emit("chat:message", data);
@@ -57,8 +61,8 @@ app.prepare().then(()=>{
         socket.on("disconnect", () => {
             const userId = socket.data.userId;
             if (userId) {
-                onlineUsers.delete(userId);
-                io.emit("users:online", Array.from(onlineUsers.keys()));
+                onlineUsers!.delete(userId);
+                io!.emit("users:online", Array.from(onlineUsers!.keys()));
             }
         });
 
@@ -73,3 +77,6 @@ app.prepare().then(()=>{
         console.log(`> Ready on http://${hostname}:${port}`)
     })
 })
+
+// Export io and onlineUsers for use in API routes (ESM syntax)
+export { io, onlineUsers };

@@ -1,6 +1,6 @@
 "use client";
 import { checkMediaType } from "@/lib/utils";
-import { Heart, MessageSquare, Share, MoreHorizontal, Bookmark, Volume2, VolumeX } from "lucide-react";
+import { Heart, MessageSquare, Share, MoreHorizontal, Bookmark, Volume2, VolumeX, Sparkles } from "lucide-react";
 import Image from "next/image";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Textarea } from "./ui/textarea";
@@ -11,6 +11,8 @@ import { useUser } from "@clerk/nextjs";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import Link from 'next/link';
+import { cn } from "@/lib/utils";
+
 dayjs.extend(relativeTime);
 
 interface User {
@@ -31,7 +33,7 @@ interface Comment {
   user: User;
   postId: string;
   parentId: string | null;
-  replies?: Comment[]; // Added for nested replies
+  replies?: Comment[];
 }
 
 interface Like {
@@ -98,48 +100,42 @@ const PostSkeleton = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col w-full max-w-[400px] border rounded-xl overflow-hidden bg-card shadow-sm"
+      className="flex flex-col w-full max-w-xl bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg overflow-hidden"
     >
-      <div className="flex justify-between items-center p-2 border-b">
-        <div className="flex gap-2 items-center">
-          <div className="rounded-full w-7 h-7 bg-gray-200 animate-pulse" />
-          <div className="space-y-1">
-            <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
-            <div className="h-2 w-16 bg-gray-200 rounded animate-pulse" />
+      <div className="flex justify-between items-center p-4 border-b border-border/40">
+        <div className="flex gap-3 items-center">
+          <div className="rounded-full w-10 h-10 bg-muted/60 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-28 bg-muted/40 rounded animate-pulse" />
+            <div className="h-3 w-20 bg-muted/30 rounded animate-pulse" />
           </div>
         </div>
-        <div className="h-7 w-7 bg-gray-200 rounded-full animate-pulse" />
+        <div className="h-10 w-10 bg-muted/60 rounded-full animate-pulse" />
       </div>
-
-      <div className="w-full h-[450px] bg-gray-200 animate-pulse" />
-
-      <div className="p-2 space-y-2">
+      <div className="w-full aspect-square bg-muted/40 animate-pulse" />
+      <div className="p-4 space-y-3">
         <div className="flex justify-between">
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-7 w-7 bg-gray-200 rounded-full animate-pulse" />
+              <div key={i} className="h-8 w-8 bg-muted/60 rounded-full animate-pulse" />
             ))}
           </div>
-          <div className="h-7 w-7 bg-gray-200 rounded-full animate-pulse" />
+          <div className="h-8 w-8 bg-muted/60 rounded-full animate-pulse" />
         </div>
-
-        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-
-        <div className="space-y-1">
-          <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
-          <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse" />
+        <div className="h-4 w-20 bg-muted/40 rounded animate-pulse" />
+        <div className="space-y-2">
+          <div className="h-4 w-full bg-muted/40 rounded animate-pulse" />
+          <div className="h-4 w-3/4 bg-muted/30 rounded animate-pulse" />
         </div>
-
-        <div className="space-y-1">
-          <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+        <div className="space-y-2">
+          <div className="h-4 w-28 bg-muted/40 rounded animate-pulse" />
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-3 w-full bg-gray-200 rounded animate-pulse" />
+            <div key={i} className="h-4 w-full bg-muted/30 rounded animate-pulse" />
           ))}
         </div>
-
-        <div className="flex gap-1">
-          <div className="flex-1 h-7 bg-gray-200 rounded animate-pulse" />
-          <div className="h-7 w-16 bg-gray-200 rounded animate-pulse" />
+        <div className="flex gap-2">
+          <div className="flex-1 h-8 bg-muted/40 rounded animate-pulse" />
+          <div className="h-8 w-20 bg-muted/60 rounded animate-pulse" />
         </div>
       </div>
     </motion.div>
@@ -191,7 +187,10 @@ const Post = ({ postData, isLoading = false, refetchPosts }: PostProps) => {
     userPosts.forEach(post => {
       initialComments[post.id] = post.comments || [];
       initialSaved[post.id] = post.bookmarks?.some(bookmark => bookmark.userId === currentUser?.id) || false;
-      initialLikeStatus[post.id] = { liked: post.likes?.some(like => like.userId === currentUser?.id), likeCount: post.likes?.length ?? 0 };
+      initialLikeStatus[post.id] = { 
+        liked: post.likes?.some(like => like.userId === currentUser?.id), 
+        likeCount: post.likes?.length ?? 0 
+      };
     });
 
     setAllComments(initialComments);
@@ -415,7 +414,7 @@ const Post = ({ postData, isLoading = false, refetchPosts }: PostProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col overflow-y-auto gap-4 w-full items-center scrollbar-hide py-2 bg-background text-foreground">
+      <div className="flex flex-col gap-6 w-full items-center py-4">
         {[...Array(3)].map((_, index) => (
           <PostSkeleton key={index} />
         ))}
@@ -425,17 +424,28 @@ const Post = ({ postData, isLoading = false, refetchPosts }: PostProps) => {
 
   if (!isLoading && (!userPosts || userPosts.length === 0)) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-8">
-        <div className="text-center space-y-2">
-          <div className="text-muted-foreground text-lg">No posts yet</div>
-          <p className="text-muted-foreground text-sm">When you create posts, they'll appear here</p>
+      <motion.div 
+        className="flex flex-col items-center justify-center h-full py-12"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg p-8 text-center space-y-3 max-w-md">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-lg">Pinggo</span>
+          </div>
+          <div className="text-muted-foreground text-lg font-semibold">No posts yet</div>
+          <p className="text-muted-foreground">When you create posts, they'll appear here</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="flex flex-col overflow-y-auto gap-4 w-full items-center scrollbar-hide py-2 bg-background text-foreground">
+    <div className="flex flex-col gap-6 w-full items-center py-4">
       {userPosts.map((post, index) => {
         const media = Array.isArray(post.mediat) && post.mediat.length > 0 ? post.mediat[0] : undefined;
         const mediaType = mediaTypes[index] || 'unknown';
@@ -451,38 +461,51 @@ const Post = ({ postData, isLoading = false, refetchPosts }: PostProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="flex flex-col w-full max-w-[400px] border rounded-xl overflow-hidden bg-card shadow-sm"
+            className="flex flex-col w-full max-w-xl bg-card/80 backdrop-blur-lg rounded-2xl border border-border shadow-lg overflow-hidden"
           >
-            <div className="flex justify-between items-center p-2 border-b">
-              <Link href={post.user.id !== currentUser?.id ? `/chat/${post.user.id}` : '#'} className="flex gap-2 items-center group" prefetch={false}>
+            {/* Post Header */}
+            <div className="flex justify-between items-center p-4 border-b border-border/40">
+              <Link 
+                href={post.user.id !== currentUser?.id ? `/chat/${post.user.id}` : '#'} 
+                className="flex gap-3 items-center group"
+                prefetch={false}
+              >
                 <Image
                   src={post.user.avatarUrl || '/default-profile.png'}
-                  width={32}
-                  height={32}
+                  width={40}
+                  height={40}
                   alt={`${post.user.username}'s profile`}
-                  className="rounded-full w-7 h-7 border border-primary/30 object-cover group-hover:ring-2 group-hover:ring-primary transition"
+                  className="rounded-full w-10 h-10 border-2 border-primary/30 object-cover group-hover:ring-2 group-hover:ring-primary transition"
                 />
                 <div>
-                  <p className="font-medium text-sm group-hover:text-primary transition-colors">{post.user.username}</p>
-                  {post.location && <p className="text-muted-foreground text-xs">{post.location}</p>}
+                  <p className="font-bold text-base group-hover:text-primary transition-colors">
+                    {post.user.username}
+                  </p>
+                  {post.location && (
+                    <p className="text-muted-foreground text-xs">
+                      {post.location}
+                    </p>
+                  )}
                 </div>
               </Link>
-              <Button variant="ghost" size="icon" className="rounded-full h-7 w-7">
-                <MoreHorizontal className="w-3.5 h-3.5" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full h-10 w-10 hover:bg-primary/10"
+              >
+                <MoreHorizontal className="w-5 h-5" />
               </Button>
             </div>
 
-            <div className="w-full h-[450px] bg-black flex items-center justify-center relative">
+            {/* Media Content */}
+            <div className="relative w-full aspect-square bg-muted/40 flex items-center justify-center">
               {media && mediaType === 'image' && !mediaErrors[index] ? (
                 <Image
                   src={media.mediaUrl}
                   alt={post.content || `Post by ${post.user.username}`}
                   fill
                   className="w-full h-full object-cover"
-                  onError={() => {
-                    console.error(`Error loading image for post ${post.id}`);
-                    setMediaErrors(prev => ({ ...prev, [index]: true }));
-                  }}
+                  onError={() => setMediaErrors(prev => ({ ...prev, [index]: true }))}
                 />
               ) : media && mediaType === 'video' && !mediaErrors[index] ? (
                 <>
@@ -494,15 +517,12 @@ const Post = ({ postData, isLoading = false, refetchPosts }: PostProps) => {
                     muted={mutedStates[index] ?? true}
                     playsInline
                     onClick={() => toggleVideoPlay(index)}
-                    onError={() => {
-                      console.error(`Error loading video for post ${post.id}`);
-                      setMediaErrors(prev => ({ ...prev, [index]: true }));
-                    }}
+                    onError={() => setMediaErrors(prev => ({ ...prev, [index]: true }))}
                   >
                     <source src={media.mediaUrl} type="video/mp4" />
                     <source src={media.mediaUrl} type="video/webm" />
-                    Your browser does not support the video tag.
                   </video>
+                  
                   {playingIndex !== index && (
                     <div
                       className="absolute inset-0 flex items-center justify-center cursor-pointer"
@@ -519,146 +539,145 @@ const Post = ({ postData, isLoading = false, refetchPosts }: PostProps) => {
                       </div>
                     </div>
                   )}
+                  
                   <button
-                    className="absolute bottom-2 right-2 bg-black/50 rounded-full p-1.5"
+                    className="absolute bottom-4 right-4 bg-black/50 rounded-full p-2 backdrop-blur-sm"
                     onClick={e => {
                       e.stopPropagation();
                       toggleMute(index);
                     }}
                   >
                     {mutedStates[index] ?? true ? (
-                      <VolumeX className="w-3.5 h-3.5 text-white" />
+                      <VolumeX className="w-4 h-4 text-white" />
                     ) : (
-                      <Volume2 className="w-3.5 h-3.5 text-white" />
+                      <Volume2 className="w-4 h-4 text-white" />
                     )}
                   </button>
                 </>
               ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                  <p className="text-gray-500">{mediaErrors[index] ? "Error loading media" : "No media available"}</p>
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <p className="text-muted-foreground">
+                    {mediaErrors[index] ? "Error loading media" : "No media available"}
+                  </p>
                 </div>
               )}
             </div>
 
-            <div className="p-2">
-              <div className="flex justify-between items-center mb-1">
-                <div className="flex gap-2">
+            {/* Post Actions */}
+            <div className="p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="flex gap-3">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleLike(post.id, index)}
-                    className="rounded-full hover:bg-primary/10 h-7 w-7"
-                    disabled={isLiked}
+                    className={cn(
+                      "rounded-full h-9 w-9",
+                      isLiked ? "text-destructive hover:bg-destructive/10" : "hover:bg-primary/10"
+                    )}
                   >
                     <Heart
-                      fill={isLiked ? "#ef4444" : "none"}
-                      stroke={isLiked ? "#ef4444" : "currentColor"}
-                      className="w-4 h-4"
+                      fill={isLiked ? "currentColor" : "none"}
+                      className="w-5 h-5"
                     />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-full hover:bg-primary/10 h-7 w-7"
+                    className="rounded-full h-9 w-9 hover:bg-primary/10"
                   >
-                    <MessageSquare className="w-4 h-4" />
+                    <MessageSquare className="w-5 h-5" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="rounded-full hover:bg-primary/10 h-7 w-7"
+                    className="rounded-full h-9 w-9 hover:bg-primary/10"
                   >
-                    <Share className="w-4 h-4" />
+                    <Share className="w-5 h-5" />
                   </Button>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handleSave(post.id)}
-                  className="rounded-full hover:bg-primary/10 h-7 w-7"
+                  className={cn(
+                    "rounded-full h-9 w-9",
+                    savedPosts[post.id] ? "text-primary hover:bg-primary/10" : "hover:bg-primary/10"
+                  )}
                 >
-                  <Bookmark fill={savedPosts[post.id] ? "currentColor" : "none"} className="w-4 h-4" />
+                  <Bookmark
+                    fill={savedPosts[post.id] ? "currentColor" : "none"}
+                    className="w-5 h-5"
+                  />
                 </Button>
               </div>
 
-              <p className="font-semibold text-xs mb-1">
+              {/* Likes */}
+              <p className="font-semibold text-sm">
                 {formatLikeCount(likeCount)} like{likeCount !== 1 ? "s" : ""}
               </p>
 
+              {/* Caption */}
               {post.content && (
-                <p className="mb-1 text-xs">
-                  <span className="font-semibold">{post.user.username}</span> <span>{post.content}</span>
+                <p className="text-sm">
+                  <span className="font-semibold">{post.user.username}</span>{" "}
+                  <span>{post.content}</span>
                 </p>
               )}
 
-              {postComments.length > 0 ? (
-                <div className="mb-1">
+              {/* Comments */}
+              {postComments.length > 0 && (
+                <div className="space-y-3">
                   {postComments.length > 2 && !showAll && (
                     <button
-                      className="text-muted-foreground text-xs mb-0.5 hover:text-foreground"
+                      className="text-muted-foreground text-sm hover:text-foreground"
                       onClick={() => toggleShowComments(post.id)}
                     >
-                      View all {postComments.length} comment{postComments.length !== 1 ? "s" : ""}
+                      View all {postComments.length} comments
                     </button>
                   )}
+                  
                   {(showAll ? postComments : postComments.slice(0, 2)).map(comment => (
-                    <div key={comment.id} className="mb-2 text-xs border-b border-border pb-2">
-                      <Link href={comment.user.id !== currentUser?.id ? `/chat/${comment.user.id}` : '#'} prefetch={false}>
+                    <div key={comment.id} className="flex gap-3">
+                      <Link 
+                        href={comment.user.id !== currentUser?.id ? `/chat/${comment.user.id}` : '#'}
+                        className="flex-shrink-0"
+                        prefetch={false}
+                      >
                         <Image
                           src={comment.user.avatarUrl || '/default-profile.png'}
                           alt={comment.user.username}
-                          width={24}
-                          height={24}
-                          className="rounded-full w-6 h-6 object-cover border border-primary/20 hover:ring-2 hover:ring-primary transition"
+                          width={32}
+                          height={32}
+                          className="rounded-full w-8 h-8 object-cover border border-primary/20 hover:ring-2 hover:ring-primary transition"
                         />
                       </Link>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <Link href={comment.user.id !== currentUser?.id ? `/chat/${comment.user.id}` : '#'} prefetch={false}>
-                            <span className="font-semibold text-foreground hover:text-primary transition-colors">{comment.user.username}</span>
+                          <Link 
+                            href={comment.user.id !== currentUser?.id ? `/chat/${comment.user.id}` : '#'}
+                            className="font-semibold text-sm hover:text-primary transition-colors"
+                            prefetch={false}
+                          >
+                            {comment.user.username}
                           </Link>
-                          <span className="text-muted-foreground text-2xs">{dayjs(comment.createdAt).fromNow()}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {dayjs(comment.createdAt).fromNow()}
+                          </span>
                         </div>
-                        <div className="text-foreground mt-0.5">{comment.content}</div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm mt-1">{comment.content}</p>
+                        <div className="flex items-center gap-3 mt-2">
                           <button
-                            className="text-primary text-xs hover:underline focus:outline-none"
+                            className="text-primary text-xs hover:underline"
                             onClick={() => setReplyingTo(prev => ({ ...prev, [comment.id]: prev[comment.id] ? null : post.id }))}
                           >
                             Reply
                           </button>
                         </div>
-                        {/* Replies */}
-                        {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-                          <div className="ml-7 mt-2 space-y-2 bg-muted/40 rounded-lg p-2">
-                            {comment.replies.map(reply => (
-                              <div key={reply.id} className="flex items-start gap-2">
-                                <Link href={reply.user.id !== currentUser?.id ? `/chat/${reply.user.id}` : '#'} prefetch={false}>
-                                  <Image
-                                    src={reply.user.avatarUrl || '/default-profile.png'}
-                                    alt={reply.user.username}
-                                    width={20}
-                                    height={20}
-                                    className="rounded-full w-5 h-5 object-cover border border-primary/10 hover:ring-2 hover:ring-primary transition"
-                                  />
-                                </Link>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <Link href={reply.user.id !== currentUser?.id ? `/chat/${reply.user.id}` : '#'} prefetch={false}>
-                                      <span className="font-semibold text-foreground hover:text-primary transition-colors">{reply.user.username}</span>
-                                    </Link>
-                                    <span className="text-muted-foreground text-2xs">{dayjs(reply.createdAt).fromNow()}</span>
-                                  </div>
-                                  <div className="text-foreground mt-0.5">{reply.content}</div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                         {/* Reply form */}
                         {replyingTo[comment.id] === post.id && (
                           <form
-                            className="flex gap-1 mt-2 ml-7"
+                            className="flex gap-2 mt-3"
                             onSubmit={e => {
                               e.preventDefault();
                               handleReply(post.id, comment.id);
@@ -669,52 +688,58 @@ const Post = ({ postData, isLoading = false, refetchPosts }: PostProps) => {
                               value={replyInputs[comment.id] || ''}
                               onChange={e => setReplyInputs(prev => ({ ...prev, [comment.id]: e.target.value }))}
                               rows={1}
-                              className="resize-none flex-1 text-xs h-7"
+                              className="resize-none flex-1 text-sm min-h-[40px]"
                             />
                             <Button
                               type="submit"
                               variant="ghost"
                               disabled={!replyInputs[comment.id]?.trim()}
-                              className="text-primary disabled:text-muted-foreground h-7 px-1.5 text-xs"
+                              className="text-primary disabled:text-muted-foreground h-10 px-3 text-sm"
                             >
-                              Reply
+                              Post
                             </Button>
                           </form>
                         )}
                       </div>
                     </div>
                   ))}
+                  
                   {showAll && postComments.length > 2 && (
                     <button
-                      className="text-muted-foreground text-xs mb-0.5 hover:text-foreground"
+                      className="text-muted-foreground text-sm hover:text-foreground"
                       onClick={() => toggleShowComments(post.id)}
                     >
                       Show less
                     </button>
                   )}
                 </div>
-              ) : (
-                <p className="text-muted-foreground text-2xs mb-1">No comments yet</p>
               )}
 
-              <form onSubmit={e => handleSubmit(e, post.id)} className="mt-1">
-                <div className="flex gap-1">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={comments[post.id] || ""}
-                    onChange={e => setComments(prev => ({ ...prev, [post.id]: e.target.value }))}
-                    rows={1}
-                    className="resize-none flex-1 text-xs h-7"
-                  />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    disabled={!comments[post.id]?.trim()}
-                    className="text-primary disabled:text-muted-foreground h-7 px-1.5 text-xs"
-                  >
-                    Post
-                  </Button>
-                </div>
+              {/* Timestamp */}
+              <p className="text-muted-foreground text-xs">
+                {dayjs(post.createdAt).fromNow()}
+              </p>
+
+              {/* Add Comment */}
+              <form 
+                onSubmit={e => handleSubmit(e, post.id)} 
+                className="flex gap-2 pt-2 border-t border-border/40"
+              >
+                <Textarea
+                  placeholder="Add a comment..."
+                  value={comments[post.id] || ""}
+                  onChange={e => setComments(prev => ({ ...prev, [post.id]: e.target.value }))}
+                  rows={1}
+                  className="resize-none flex-1 text-sm min-h-[40px]"
+                />
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  disabled={!comments[post.id]?.trim()}
+                  className="text-primary disabled:text-muted-foreground h-10 px-3 text-sm"
+                >
+                  Post
+                </Button>
               </form>
             </div>
           </motion.div>

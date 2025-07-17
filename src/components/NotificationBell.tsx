@@ -211,51 +211,65 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ className = 
               </p>
             </div>
           ) : (
-            <div className="p-2">
+            <div className="p-2 space-y-2">
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
                   className={`
-                    flex items-start space-x-3 p-3 rounded-lg cursor-pointer transition-colors
-                    hover:bg-muted/50
-                    ${!notification.read ? 'bg-muted/30' : ''}
+                    group flex items-start space-x-3 p-3 rounded-xl cursor-pointer transition-colors
+                    border border-transparent hover:border-border shadow-sm
+                    ${!notification.read ? 'bg-primary/5 border-primary/30' : 'bg-background'}
                   `}
                   onClick={() => handleNotificationClick(notification)}
+                  tabIndex={0}
+                  aria-label={getNotificationTitle(notification)}
                 >
+                  {/* Avatar/Icon */}
                   <div className="flex-shrink-0">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm">
-                      {getNotificationIcon(notification.type)}
-                    </div>
+                    {notification.reciverId?.avatarUrl ? (
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={notification.reciverId.avatarUrl} />
+                        <AvatarFallback>
+                          {notification.reciverId.username?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-lg">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                    )}
                   </div>
-                  
+                  {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <h4 className="text-sm font-medium truncate">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-semibold truncate">
                         {getNotificationTitle(notification)}
                       </h4>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="w-6 h-6 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteNotif(notification.id);
                         }}
+                        aria-label="Delete notification"
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    <p className="text-sm text-foreground mt-1 line-clamp-2">
                       {getNotificationMessage(notification)}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {formatNotificationTime(notification.createdAt)}
-                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-muted-foreground">
+                        {formatNotificationTime(notification.createdAt)}
+                      </span>
+                      {!notification.read && (
+                        <span className="w-2 h-2 bg-primary rounded-full inline-block" aria-label="Unread" />
+                      )}
+                    </div>
                   </div>
-                  
-                  {!notification.read && (
-                    <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
-                  )}
                 </div>
               ))}
             </div>

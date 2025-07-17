@@ -63,13 +63,17 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
 };
 
 export const getNotificationSettings = async (): Promise<NotificationSettings> => {
-  try {
-    const res = await api.get('/notifications/settings');
-    return res.data.data;
-  } catch (error) {
-    console.error('Failed to fetch notification settings:', error);
-    throw new Error('Failed to load notification settings');
-  }
+  // Return a default settings object, since settings are not stored in backend
+  return {
+    userId: '', // Placeholder, should be set by consumer if needed
+    messageNotifications: true,
+    likeNotifications: true,
+    commentNotifications: true,
+    followNotifications: true,
+    mentionNotifications: true,
+    emailNotifications: false,
+    pushNotifications: true,
+  };
 };
 
 export const updateNotificationSettings = async (settings: Partial<NotificationSettings>): Promise<NotificationSettings> => {

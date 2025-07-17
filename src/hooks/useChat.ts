@@ -3,6 +3,7 @@ import { useUser } from '@clerk/nextjs';
 import { socket, connectSocket, disconnectSocket } from '@/lib/socket';
 import { Message, ChatPartner, fetchMessages, sendMessage, markMessagesAsRead } from '@/services/chatService';
 import { showChatNotification } from '@/services/notificationService';
+import { useProfile } from '@/hooks/useProfile';
 
 interface UseChatProps {
   partnerId: string;
@@ -21,6 +22,7 @@ interface UseChatReturn {
 
 export const useChat = ({ partnerId }: UseChatProps): UseChatReturn => {
   const { user: currentUser } = useUser();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export const useChat = ({ partnerId }: UseChatProps): UseChatReturn => {
 
   // Load messages
   const loadMessages = useCallback(async () => {
-    if (!partnerId || !currentUser) return;
+    if (!partnerId || !profile?.id) return;
     
     try {
       setIsLoading(true);
@@ -54,11 +56,11 @@ export const useChat = ({ partnerId }: UseChatProps): UseChatReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [partnerId, currentUser]);
+  }, [partnerId, profile?.id]);
 
   // Send message
   const handleSendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || !partnerId || !currentUser) return;
+    if (!text.trim() || !partnerId || !profile?.id) return;
     
     try {
       const newMessage = await sendMessage(partnerId, text.trim());
@@ -67,7 +69,7 @@ export const useChat = ({ partnerId }: UseChatProps): UseChatReturn => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
     }
-  }, [partnerId, currentUser, scrollToBottom]);
+  }, [partnerId, profile?.id, scrollToBottom]);
 
   // Mark messages as read
   const handleMarkAsRead = useCallback(async () => {
@@ -83,15 +85,15 @@ export const useChat = ({ partnerId }: UseChatProps): UseChatReturn => {
 
   // Socket connection and real-time updates
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!profile?.id) return;
 
-    connectSocket(currentUser.id);
+    connectSocket(profile.id);
 
     // Listen for incoming messages
     const handleNewMessage = (data: any) => {
       if (
-        (data.from === currentUser.id && data.to === partnerId) ||
-        (data.from === partnerId && data.to === currentUser.id)
+        (data.from === profile.id && data.to === partnerId) ||
+        (data.from === partnerId && data.to === profile.id)
       ) {
         const newMessage: Message = {
           id: Math.random().toString(36).substr(2, 9),
@@ -130,12 +132,12 @@ export const useChat = ({ partnerId }: UseChatProps): UseChatReturn => {
       }
       disconnectSocket();
     };
-  }, [currentUser?.id, partnerId, handleMarkAsRead, scrollToBottom]);
+  }, [profile?.id, partnerId, handleMarkAsRead, scrollToBottom]);
 
   // Load messages when partner changes
   useEffect(() => {
     loadMessages();
-  }, [loadMessages]);
+  }, [loadMessages, profile?.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {

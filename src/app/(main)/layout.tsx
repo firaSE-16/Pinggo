@@ -1,5 +1,5 @@
 "use client"
-import Sidebar from "@/components/sidebar";
+import Sidebar, { MobileNavigation } from "@/components/sidebar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import clsx from "clsx";
 import { usePathname } from "next/navigation";
@@ -29,10 +29,19 @@ const pathname=usePathname()
           </div>
           
           {/* Main content with responsive margin */}
-          <div className={clsx("w-full md:ml-24  min-h-screen",chat?"lg:ml-24":"lg:ml-72")}>
+          <div className={clsx(
+            "w-full min-h-screen transition-all duration-300",
+            "mb-16 md:mb-0", // bottom margin for mobile nav
+            "bg-gradient-to-br from-background via-primary/5 to-secondary/10 bg-fixed",
+            // Always apply sidebar margin
+            "md:ml-72 lg:ml-72"
+          )}>
             {children}
           </div>
-          
+          {/* Mobile navigation - only visible on mobile */}
+          <div className="md:hidden fixed bottom-0 left-0 w-full z-50">
+            <MobileNavigation />
+          </div>
         </div>
       </ProtectedRoute>
     </QueryClientProvider>

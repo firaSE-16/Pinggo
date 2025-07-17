@@ -14,7 +14,8 @@ interface ClientToServerEvents {
     "chat:message": (data: { to: string; from: string; message: string; timestamp: string }) => void;
 }
 
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io({
+// Updated to use explicit backend URL for socket connection
+export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io("http://localhost:4000", {
     autoConnect: false,
 })
 

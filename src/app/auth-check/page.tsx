@@ -12,44 +12,16 @@ export default function AuthCheckPage() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const checkUserRegistration = async () => {
-      if (!isLoaded) {
-        return;
-      }
+    if (!isLoaded) return;
 
-      // If no user, redirect to sign-in
-      if (!user) {
-        router.push('/sign-in');
-        return;
-      }
+    // If no user, redirect to sign-in
+    if (!user) {
+      router.push('/sign-in');
+      return;
+    }
 
-      try {
-        setIsChecking(true);
-        
-        // Check if user exists in our database
-        const response = await api.get('/api/user/check-registration');
-        
-        console.log('Auth check response:', response.data);
-        
-        if (response.data.exists === true) {
-          console.log('User exists, redirecting to home');
-          // User is fully registered, redirect to home
-          router.push('/home');
-        } else {
-          console.log('User does not exist, redirecting to registration');
-          // User needs to complete registration
-          router.push('/registration');
-        }
-      } catch (error) {
-        console.error('Error checking user registration:', error);
-        // If there's an error, assume user needs registration
-        router.push('/registration');
-      } finally {
-        setIsChecking(false);
-      }
-    };
-
-    checkUserRegistration();
+    // If user exists in Clerk, redirect to home
+    router.push('/home');
   }, [user, isLoaded, router]);
 
   if (!isLoaded || isChecking) {

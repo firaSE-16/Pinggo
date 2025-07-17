@@ -20,10 +20,14 @@ import {
   Monitor
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { UserButton, useUser } from "@clerk/nextjs";
+import { ModeToggle } from "@/components/Global/mode-toggle";
+import Image from "next/image";
 
 const SettingsPage = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { user, isLoaded } = useUser();
   const [notifications, setNotifications] = useState({
     push: true,
     email: false,
@@ -50,75 +54,65 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage your account preferences and privacy</p>
+    <div className="container mx-auto px-2 md:px-6 py-8 max-w-3xl space-y-10">
+      {/* User Info Card */}
+      <Card className="glassy-card shadow-2xl rounded-3xl flex items-center gap-6 p-8 animate-fade-in">
+        <div className="flex items-center gap-4">
+          <Image
+            src={user?.imageUrl || '/default-avatar.png'}
+            alt={user?.fullName || 'User'}
+            width={64}
+            height={64}
+            className="w-16 h-16 rounded-full border-2 border-primary object-cover shadow-md"
+          />
+          <div>
+            <h2 className="text-2xl font-bold">{user?.fullName || user?.username}</h2>
+            <p className="text-muted-foreground text-lg">{user?.emailAddresses?.[0]?.emailAddress}</p>
+          </div>
         </div>
+        <div className="ml-auto flex items-center gap-4">
+          <ModeToggle />
+          <UserButton afterSignOutUrl="/sign-in" />
+        </div>
+      </Card>
 
+      <div className="space-y-8">
         {/* Theme Settings */}
-        <Card>
+        <Card className="glassy-card shadow-xl rounded-2xl animate-fade-in">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <Palette className="w-6 h-6" />
               Appearance
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base">
               Customize how Pinggo looks on your device
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Theme</Label>
-                <p className="text-sm text-muted-foreground">
+              <div className="space-y-1">
+                <Label className="text-lg">Theme</Label>
+                <p className="text-base text-muted-foreground">
                   Choose your preferred theme
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant={theme === 'light' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTheme('light')}
-                >
-                  <Sun className="w-4 h-4 mr-2" />
-                  Light
-                </Button>
-                <Button
-                  variant={theme === 'dark' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTheme('dark')}
-                >
-                  <Moon className="w-4 h-4 mr-2" />
-                  Dark
-                </Button>
-                <Button
-                  variant={theme === 'system' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTheme('system')}
-                >
-                  <Monitor className="w-4 h-4 mr-2" />
-                  System
-                </Button>
-              </div>
+              <ModeToggle />
             </div>
           </CardContent>
         </Card>
 
         {/* Notification Settings */}
-        <Card>
+        <Card className="glassy-card shadow-xl rounded-2xl animate-fade-in">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <Bell className="w-6 h-6" />
               Notifications
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base">
               Choose what notifications you want to receive
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -207,17 +201,17 @@ const SettingsPage = () => {
         </Card>
 
         {/* Privacy Settings */}
-        <Card>
+        <Card className="glassy-card shadow-xl rounded-2xl animate-fade-in">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-3 text-xl font-bold">
+              <Shield className="w-6 h-6" />
               Privacy
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base">
               Control who can see your profile and content
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">

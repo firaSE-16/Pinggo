@@ -2,6 +2,8 @@
 import Image from "next/image";
 import React, { useState } from "react";
 import OpenStory from "./OpenStory";
+import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 
 interface User {
   id: string;
@@ -42,12 +44,14 @@ interface StoryProps {
 
 const StorySkeleton = () => {
   return (
-    <div className="shrink-0 flex flex-col gap-2 items-center">
-      <div className="rounded-full border-4 border-primary w-18 h-18">
-        <div className="w-full h-full rounded-full bg-gray-200 animate-pulse" />
-      </div>
-      <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
-    </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="shrink-0 flex flex-col gap-2 items-center"
+    >
+      <div className="rounded-full border-2 border-primary/30 w-16 h-16 bg-muted/40 animate-pulse" />
+      <div className="h-3 w-12 bg-muted/40 rounded animate-pulse" />
+    </motion.div>
   );
 };
 
@@ -65,11 +69,11 @@ const Story: React.FC<StoryProps> = ({ postData, isLoading = false }) => {
     location: postData.data.location,
   };
 
-  const userStories = postData.data.stories
+  const userStories = postData.data.stories;
 
   if (isLoading) {
     return (
-      <div className="flex space-x-6 overflow-x-auto p-4 scrollbar-hide h-full bg-gradient-to-b from-background to-muted/40 rounded-xl">
+      <div className="flex gap-4 overflow-x-auto p-4 scrollbar-hide glassy-card rounded-2xl">
         {[...Array(8)].map((_, index) => (
           <StorySkeleton key={index} />
         ))}
@@ -79,49 +83,73 @@ const Story: React.FC<StoryProps> = ({ postData, isLoading = false }) => {
 
   if (!isLoading && (!userStories || userStories.length === 0)) {
     return (
-      <div className="flex items-center justify-center p-4 h-full bg-gradient-to-b from-background to-muted/40 rounded-xl">
-        <div className="text-center text-muted-foreground">
-          <p>No stories available</p>
-          <p className="text-sm">When you post stories, they'll appear here</p>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex items-center justify-center p-6 glassy-card rounded-2xl"
+      >
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-bold">Pinggo</span>
+          </div>
+          <p className="text-muted-foreground font-medium">No stories available</p>
+          <p className="text-muted-foreground text-sm">
+            When you post stories, they'll appear here
+          </p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
-  return isOpen ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center w-full h-full">
-      <OpenStory
-        stories={userStories}
-        currentIndex={currentIndex}
-        onClose={() => setIsOpen(false)}
-      />
-    </div>
-  ) : (
-    <div className="flex space-x-6 overflow-x-auto p-4 scrollbar-hide h-full bg-gradient-to-b from-background to-muted/40 rounded-xl">
-      {userStories.map((story, index) => (
-        <div
-          key={story.id}
-          className="shrink-0 flex flex-col gap-2 items-center cursor-pointer group"
-          onClick={() => {
-            setCurrentIndex(index);
-            setIsOpen(true);
-          }}
-        >
-          <div className="rounded-full border-4 border-primary group-hover:scale-105 transition-transform duration-200">
-            <Image
-              src={story.user.avatarUrl || "/default-profile.png"}
-              alt={story.user.username}
-              width={72}
-              height={72}
-              className="object-cover rounded-full w-18 h-18"
-            />
-          </div>
-          <span className="text-xs font-medium text-foreground/80 group-hover:text-primary transition-colors duration-200">
-            {story.user.username}
-          </span>
-        </div>
-      ))}
-    </div>
+  return (
+    <>
+      {isOpen && (
+        <OpenStory
+          stories={userStories}
+          currentIndex={currentIndex}
+          onClose={() => setIsOpen(false)}
+        />
+      )}
+      
+      <div className="flex gap-4 overflow-x-auto p-4 scrollbar-hide glassy-card rounded-2xl">
+        {userStories.map((story, index) => (
+          <motion.div
+            key={story.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="shrink-0 flex flex-col gap-2 items-center cursor-pointer group"
+            onClick={() => {
+              setCurrentIndex(index);
+              setIsOpen(true);
+            }}
+          >
+            <div className="relative rounded-full border-2 border-primary p-0.5 group-hover:border-primary/80 transition-colors">
+              <div className="rounded-full w-14 h-14 bg-gradient-to-br from-primary/10 to-muted overflow-hidden">
+                <Image
+                  src={story.user.avatarUrl || "/default-profile.png"}
+                  alt={story.user.username}
+                  width={56}
+                  height={56}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              {index === 0 && (
+                <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-1 border-2 border-background">
+                  <Sparkles className="w-3 h-3 text-primary-foreground" />
+                </div>
+              )}
+            </div>
+            <span className="text-xs font-medium text-foreground/90 group-hover:text-primary transition-colors">
+              {story.user.username}
+            </span>
+          </motion.div>
+        ))}
+      </div>
+    </>
   );
 };
 
